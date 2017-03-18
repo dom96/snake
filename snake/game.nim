@@ -30,8 +30,12 @@ const
   segmentSize = 10 ## In pixels
   levelWidth = 30 ## In segments
   levelHeight = 18 ## In Segments
-  renderWidth = segmentSize * levelWidth ## In pixels
+  scoreSidebarWidth = 100
+  renderWidth = segmentSize * levelWidth + scoreSidebarWidth ## In pixels
   renderHeight = segmentSize * levelHeight ## In pixels
+
+const
+  levelBgColor = "#b2bd08"
 
 proc newSnakeSegment(pos: Point): SnakeSegment =
   result = SnakeSegment(
@@ -150,7 +154,7 @@ proc update*(game: Game, ticks: int) =
     game.player.head.pos.y = levelHeight
 
 proc draw*(game: Game) =
-  game.renderer.fillRect(0, 0, renderWidth, renderHeight, "#b2bd08")
+  game.renderer.fillRect(0, 0, renderWidth, renderHeight, levelBgColor)
 
   var drawSnake = true
   if (not game.player.alive) and game.tick mod 4 == 0:
@@ -171,3 +175,26 @@ proc draw*(game: Game) =
         of Apple: "🍎"
         of Cherry: "🍒"
       game.renderer.fillText(emoji, pos, font="$1px Helvetica" % $segmentSize)
+
+  # Draw the scoreboard.
+  game.renderer.fillRect(renderWidth - scoreSidebarWidth, 0, scoreSidebarWidth,
+                         renderHeight, levelBgColor)
+
+  game.renderer.strokeRect(renderWidth - scoreSidebarWidth, 5,
+                           scoreSidebarWidth - 5, renderHeight - 10,
+                           lineWidth = 2)
+
+  game.renderer.fillText("SCORE", (renderWidth - scoreSidebarWidth + 25, 25),
+                         "#000000", "14px monospace")
+  game.renderer.fillText(intToStr(game.score, 5),
+                         (renderWidth - scoreSidebarWidth + 25, 45),
+                         "#000000", "14px monospace")
+
+  if not drawSnake:
+    # Draw Game Over text.
+    game.renderer.fillText("GAME",
+                           (renderWidth - scoreSidebarWidth + 22, 100),
+                            "#000000", "20px monospace")
+    game.renderer.fillText("OVER",
+                           (renderWidth - scoreSidebarWidth + 22, 120),
+                            "#000000", "20px monospace")
