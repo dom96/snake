@@ -59,6 +59,17 @@ proc update*(game: Game, ticks: int) =
   for i in 1 .. <game.player.body.len:
     game.player.body[i].pos = game.player.body[i-1].pos
 
+  # Create a portal out of the edges of the level.
+  if game.player.head.pos.x >= levelWidth:
+    game.player.head.pos.x = 0
+  elif game.player.head.pos.x <= 0:
+    game.player.head.pos.x = levelWidth
+
+  if game.player.head.pos.y >= levelHeight:
+    game.player.head.pos.y = 0
+  elif game.player.head.pos.y <= 0:
+    game.player.head.pos.y = levelHeight
+
 proc draw*(game: Game) =
   game.renderer.fillRect(0, 0, renderWidth, renderHeight, "#b2bd08")
 
