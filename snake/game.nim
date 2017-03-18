@@ -8,11 +8,13 @@ type
     player: Snake
     food: array[2, Food]
     score: int
+    tick: int
 
   Snake = ref object
     direction: Direction
     requestedDirection: Direction
     body: seq[SnakeSegment]
+    alive: bool
 
   SnakeSegment = ref object
     pos: Point ## Position in level. Not in pixels but segment units.
@@ -47,7 +49,8 @@ proc newSnake(): Snake =
   result = Snake(
     direction: dirEast,
     requestedDirection: dirEast,
-    body: @[head]
+    body: @[head],
+    alive: true
   )
 
 proc head(snake: Snake): SnakeSegment =
@@ -107,11 +110,14 @@ proc eatFood(game: Game, foodIndex: int) =
   game.createFood(Apple, 0)
 
 proc update*(game: Game, ticks: int) =
+  # Used for tracking time.
+  game.tick.inc()
+
   # Check for collision with itself.
   let headCollision = game.detectHeadCollision()
   if headCollision:
-    console.log("Game over")
-    return # TODO:
+    game.player.alive = false
+    return
 
   # Check for food collision.
   let foodCollision = game.detectFoodCollision()
@@ -146,9 +152,14 @@ proc update*(game: Game, ticks: int) =
 proc draw*(game: Game) =
   game.renderer.fillRect(0, 0, renderWidth, renderHeight, "#b2bd08")
 
-  for segment in game.player.body:
-    let pos = segment.pos.toPixelPos()
-    game.renderer.fillRect(pos.x, pos.y, segmentSize, segmentSize, "#000000")
+  var drawSnake = true
+  if (not game.player.alive) and game.tick mod 4 == 0:
+    drawSnake = false
+
+  if drawSnake:
+    for segment in game.player.body:
+      let pos = segment.pos.toPixelPos()
+      game.renderer.fillRect(pos.x, pos.y, segmentSize, segmentSize, "#000000")
 
   # Draw the food.
   for i in 0 .. game.food.high:
