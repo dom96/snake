@@ -11,6 +11,7 @@ type
 
   Snake = ref object
     direction: Direction
+    requestedDirection: Direction
     body: seq[SnakeSegment]
 
   SnakeSegment = ref object
@@ -45,6 +46,7 @@ proc newSnake(): Snake =
 
   result = Snake(
     direction: dirEast,
+    requestedDirection: dirEast,
     body: @[head]
   )
 
@@ -72,7 +74,7 @@ proc changeDirection*(game: Game, direction: Direction) =
   if game.player.direction.toPoint() == -direction.toPoint():
     return # Disallow changing direction in opposite direction of travel.
 
-  game.player.direction = direction
+  game.player.requestedDirection = direction
 
 proc detectHeadCollision(game: Game): bool =
   # Check if head collides with any other segment.
@@ -115,6 +117,9 @@ proc update*(game: Game, ticks: int) =
   let foodCollision = game.detectFoodCollision()
   if foodCollision != -1:
     game.eatFood(foodCollision)
+
+  # Change direction.
+  game.player.direction = game.player.requestedDirection
 
   # Save old position of head.
   var oldPos = game.player.head.pos.copy()
