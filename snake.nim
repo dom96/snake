@@ -25,8 +25,8 @@ proc onKeydown(game: Game, ev: Event) =
     ev.preventDefault()
 
 proc onTick(game: Game) =
-  game.draw()
   game.update(1)
+  game.draw()
 
 proc onLoad() {.exportc.} =
   var game = newGame()

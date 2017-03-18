@@ -7,6 +7,7 @@ type
     renderer: Renderer2D
     player: Snake
     food: array[2, Food]
+    score: int
 
   Snake = ref object
     direction: Direction
@@ -73,22 +74,68 @@ proc changeDirection*(game: Game, direction: Direction) =
 
   game.player.direction = direction
 
+proc detectHeadCollision(game: Game): bool =
+  # Check if head collides with any other segment.
+  for i in 1 .. <game.player.body.len:
+    if game.player.head.pos == game.player.body[i].pos:
+      return true
+
+proc detectFoodCollision(game: Game): int =
+  # Check if head collides with food.
+  for i in 0 .. <game.food.len:
+    if game.food[i].isNil:
+      continue
+
+    if game.food[i].pos == game.player.head.pos:
+      return i
+
+  return -1
+
+proc eatFood(game: Game, foodIndex: int) =
+  let tailPos = game.player.body[^1].pos.copy()
+  game.player.body.add(newSnakeSegment(tailPos))
+
+  case game.food[foodIndex].kind
+  of Apple:
+    game.score += 1
+  of Cherry:
+    game.score += 5
+  game.food[foodIndex] = nil
+
+  game.createFood(Apple, 0)
+
 proc update*(game: Game, ticks: int) =
+  # Check for collision with itself.
+  let headCollision = game.detectHeadCollision()
+  if headCollision:
+    console.log("Game over")
+    return # TODO:
+
+  # Check for food collision.
+  let foodCollision = game.detectFoodCollision()
+  if foodCollision != -1:
+    game.eatFood(foodCollision)
+
+  # Save old position of head.
+  var oldPos = game.player.head.pos.copy()
+
+  # Move head in the current direction.
   let movementVec = game.player.direction.toPoint() * ticks
   game.player.head.pos.add(movementVec)
 
+  # Move each body segment with the head.
   for i in 1 .. <game.player.body.len:
-    game.player.body[i].pos = game.player.body[i-1].pos
+    swap(game.player.body[i].pos, oldPos)
 
   # Create a portal out of the edges of the level.
   if game.player.head.pos.x >= levelWidth:
     game.player.head.pos.x = 0
-  elif game.player.head.pos.x <= 0:
+  elif game.player.head.pos.x < 0:
     game.player.head.pos.x = levelWidth
 
   if game.player.head.pos.y >= levelHeight:
     game.player.head.pos.y = 0
-  elif game.player.head.pos.y <= 0:
+  elif game.player.head.pos.y < 0:
     game.player.head.pos.y = levelHeight
 
 proc draw*(game: Game) =
@@ -101,7 +148,8 @@ proc draw*(game: Game) =
   # Draw the food.
   for i in 0 .. game.food.high:
     if not game.food[i].isNil:
-      let pos = game.food[i].pos.toPixelPos()
+      var pos = game.food[i].pos.toPixelPos()
+      pos.y += segmentSize
       let emoji =
         case game.food[i].kind
         of Apple: "🍎"
