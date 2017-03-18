@@ -6,7 +6,7 @@ import snake/[game, keyboard]
 
 proc onKeydown(game: Game, ev: Event) =
   let key = ev.keyCode.fromKeyCode()
-  console.log("Pressed: ", key)
+  console.log("Pressed: ", $key)
 
   var handled = false
   case key

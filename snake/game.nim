@@ -22,7 +22,7 @@ proc head*(snake: Snake): SnakeSegment =
 
 proc newGame*(): Game =
   result = Game(
-    renderer: newRenderer2D("canvas"),
+    renderer: newRenderer2D("canvas", 300, 200),
     player: newSnake()
   )
 
