@@ -1,4 +1,4 @@
-import jsconsole
+import jsconsole, random, strutils
 
 import gamelight/[graphics, geometry, vec]
 
@@ -6,13 +6,21 @@ type
   Game* = ref object
     renderer: Renderer2D
     player: Snake
+    food: array[2, Food]
 
-  Snake* = ref object
+  Snake = ref object
     direction: Direction
     body: seq[SnakeSegment]
 
-  SnakeSegment* = ref object
-    pos: Point ## Position in level, not in pixels.
+  SnakeSegment = ref object
+    pos: Point ## Position in level. Not in pixels but segment units.
+
+  FoodKind = enum
+    Apple, Cherry
+
+  Food = ref object
+    kind: FoodKind
+    pos: Point ## Position in level. Not in pixels but segment units.
 
 const
   segmentSize = 10 ## In pixels
@@ -26,8 +34,10 @@ proc newSnakeSegment(pos: Point): SnakeSegment =
     pos: pos
   )
 
-proc getPixelPos(segment: SnakeSegment): Point =
-  return segment.pos * segmentSize
+proc toPixelPos(pos: Point): Point =
+  assert pos.x <= levelWidth
+  assert pos.y <= levelHeight
+  return pos * segmentSize
 
 proc newSnake(): Snake =
   let head = newSnakeSegment((0, levelHeight div 2))
@@ -40,11 +50,22 @@ proc newSnake(): Snake =
 proc head(snake: Snake): SnakeSegment =
   snake.body[0]
 
+proc generateFoodPos(game: Game): Point =
+  result = (random(0 .. levelWidth), random(0 .. levelHeight))
+
+proc createFood(game: Game, kind: FoodKind, foodIndex: int) =
+  let pos = generateFoodPos(game)
+
+  game.food[foodIndex] = Food(kind: kind, pos: pos)
+
 proc newGame*(): Game =
+  randomize()
   result = Game(
     renderer: newRenderer2D("canvas", renderWidth, renderHeight),
     player: newSnake()
   )
+
+  result.createFood(Apple, 0)
 
 proc changeDirection*(game: Game, direction: Direction) =
   if game.player.direction.toPoint() == -direction.toPoint():
@@ -74,5 +95,15 @@ proc draw*(game: Game) =
   game.renderer.fillRect(0, 0, renderWidth, renderHeight, "#b2bd08")
 
   for segment in game.player.body:
-    let pos = segment.getPixelPos()
+    let pos = segment.pos.toPixelPos()
     game.renderer.fillRect(pos.x, pos.y, segmentSize, segmentSize, "#000000")
+
+  # Draw the food.
+  for i in 0 .. game.food.high:
+    if not game.food[i].isNil:
+      let pos = game.food[i].pos.toPixelPos()
+      let emoji =
+        case game.food[i].kind
+        of Apple: "🍎"
+        of Cherry: "🍒"
+      game.renderer.fillText(emoji, pos, font="$1px Helvetica" % $segmentSize)
