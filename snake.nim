@@ -25,11 +25,11 @@ proc onKeydown(game: Game, ev: Event) =
     ev.preventDefault()
 
 proc onTick(game: Game) =
-  game.update(1)
   game.draw()
+  game.update(1)
 
 proc onLoad() {.exportc.} =
   var game = newGame()
 
   window.addEventListener("keydown", (ev: Event) => onKeydown(game, ev))
-  discard window.setInterval(() => onTick(game), 1000)
+  discard window.setInterval(() => onTick(game), 200)

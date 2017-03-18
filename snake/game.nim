@@ -15,26 +15,29 @@ type
     pos: Point ## Position in level, not in pixels.
 
 const
-  segmentSize = 30 ## In pixels
-  levelWidth = 10 ## In segments
-  levelHeight = 6 ## In Segments
+  segmentSize = 10 ## In pixels
+  levelWidth = 30 ## In segments
+  levelHeight = 18 ## In Segments
   renderWidth = segmentSize * levelWidth ## In pixels
   renderHeight = segmentSize * levelHeight ## In pixels
 
-proc newSnakeSegment*(pos: Point): SnakeSegment =
+proc newSnakeSegment(pos: Point): SnakeSegment =
   result = SnakeSegment(
     pos: pos
   )
 
-proc newSnake*(): Snake =
-  let head = newSnakeSegment((levelWidth div 2, levelHeight div 2))
+proc getPixelPos(segment: SnakeSegment): Point =
+  return segment.pos * segmentSize
+
+proc newSnake(): Snake =
+  let head = newSnakeSegment((0, levelHeight div 2))
 
   result = Snake(
     direction: dirEast,
     body: @[head]
   )
 
-proc head*(snake: Snake): SnakeSegment =
+proc head(snake: Snake): SnakeSegment =
   snake.body[0]
 
 proc newGame*(): Game =
@@ -58,3 +61,7 @@ proc update*(game: Game, ticks: int) =
 
 proc draw*(game: Game) =
   game.renderer.fillRect(0, 0, renderWidth, renderHeight, "#b2bd08")
+
+  for segment in game.player.body:
+    let pos = segment.getPixelPos()
+    game.renderer.fillRect(pos.x, pos.y, segmentSize, segmentSize, "#000000")
