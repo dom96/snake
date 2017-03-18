@@ -49,11 +49,13 @@ proc toPixelPos(pos: Point): Point =
 
 proc newSnake(): Snake =
   let head = newSnakeSegment((0, levelHeight div 2))
+  let segment = newSnakeSegment((-1, levelHeight div 2))
+  let segment2 = newSnakeSegment((-2, levelHeight div 2))
 
   result = Snake(
     direction: dirEast,
     requestedDirection: dirEast,
-    body: @[head],
+    body: @[head, segment, segment2],
     alive: true
   )
 
@@ -193,8 +195,8 @@ proc draw*(game: Game) =
   if not drawSnake:
     # Draw Game Over text.
     game.renderer.fillText("GAME",
-                           (renderWidth - scoreSidebarWidth + 22, 100),
+                           (renderWidth - scoreSidebarWidth + 23, 100),
                             "#000000", "20px monospace")
     game.renderer.fillText("OVER",
-                           (renderWidth - scoreSidebarWidth + 22, 120),
+                           (renderWidth - scoreSidebarWidth + 23, 120),
                             "#000000", "20px monospace")
