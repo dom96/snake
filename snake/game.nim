@@ -1,4 +1,4 @@
-import jsconsole, random, strutils
+import jsconsole, random, strutils, dom
 
 import gamelight/[graphics, geometry, vec]
 
@@ -9,6 +9,8 @@ type
     food: array[2, Food]
     score: int
     tick: int
+    scoreElement: Element
+    gameOverElement: Element
 
   Snake = ref object
     direction: Direction
@@ -36,7 +38,7 @@ const
 
 const
   levelBgColor = "#b2bd08"
-  font = "monospace"
+  font = "Snake"
 
 proc newSnakeSegment(pos: Point): SnakeSegment =
   result = SnakeSegment(
@@ -78,6 +80,17 @@ proc newGame*(): Game =
     player: newSnake()
   )
 
+  # Create text element nodes to show score and other messages.
+  let scoreTextPos = (renderWidth - scoreSidebarWidth + 25, 10)
+  discard result.renderer.createTextElement("score", scoreTextPos, "#000000",
+                                            "24px " & font)
+  let scorePos = (renderWidth - scoreSidebarWidth + 25, 35)
+  result.scoreElement = result.renderer.createTextElement("0000000", scorePos,
+                         "#000000", "14px " & font)
+  let gameOverTextPos = (renderWidth - scoreSidebarWidth + 23, 70)
+  result.gameOverElement = result.renderer.createTextElement("game<br/>over",
+                           gameOverTextPos, "#000000", "26px " & font)
+
   result.createFood(Apple, 0)
 
 proc changeDirection*(game: Game, direction: Direction) =
@@ -115,6 +128,9 @@ proc eatFood(game: Game, foodIndex: int) =
   game.food[foodIndex] = nil
 
   game.createFood(Apple, 0)
+
+  # Update score element.
+  game.scoreElement.innerHTML = intToStr(game.score, 7)
 
 proc update*(game: Game, ticks: int) =
   # Used for tracking time.
@@ -193,17 +209,8 @@ proc draw*(game: Game) =
                            scoreSidebarWidth - 5, renderHeight - 10,
                            lineWidth = 2)
 
-  game.renderer.fillText("score", (renderWidth - scoreSidebarWidth + 25, 25),
-                         "#000000", "14px " & font)
-  game.renderer.fillText(intToStr(game.score, 5),
-                         (renderWidth - scoreSidebarWidth + 25, 45),
-                         "#000000", "14px " & font)
-
-  if not drawSnake:
-    # Draw Game Over text.
-    game.renderer.fillText("game",
-                           (renderWidth - scoreSidebarWidth + 23, 100),
-                            "#000000", "20px " & font)
-    game.renderer.fillText("over",
-                           (renderWidth - scoreSidebarWidth + 23, 120),
-                            "#000000", "20px " & font)
+  if drawSnake:
+    game.gameOverElement.style.display = "none"
+  else:
+    # Snake isn't drawn when game is over, so blink game over text.
+    game.gameOverElement.style.display = "block"
