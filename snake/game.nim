@@ -1,4 +1,4 @@
-import jsconsole, random, strutils, dom
+import jsconsole, random, strutils, dom, math
 
 import gamelight/[graphics, geometry, vec]
 
@@ -9,6 +9,7 @@ type
     food: array[2, Food]
     score: int
     tick: int
+    lastUpdate: float
     scoreElement: Element
     gameOverElement: Element
 
@@ -19,14 +20,14 @@ type
     alive: bool
 
   SnakeSegment = ref object
-    pos: Point ## Position in level. Not in pixels but segment units.
+    pos: Point[int] ## Position in level. Not in pixels but segment units.
 
   FoodKind = enum
     Apple, Cherry
 
   Food = ref object
     kind: FoodKind
-    pos: Point ## Position in level. Not in pixels but segment units.
+    pos: Point[int] ## Position in level. Not in pixels but segment units.
 
 const
   segmentSize = 10 ## In pixels
@@ -40,12 +41,12 @@ const
   levelBgColor = "#b2bd08"
   font = "Snake"
 
-proc newSnakeSegment(pos: Point): SnakeSegment =
+proc newSnakeSegment(pos: Point[int]): SnakeSegment =
   result = SnakeSegment(
     pos: pos
   )
 
-proc toPixelPos(pos: Point): Point =
+proc toPixelPos(pos: Point[int]): Point[int] =
   assert pos.x <= levelWidth
   assert pos.y <= levelHeight
   return pos * segmentSize
@@ -65,7 +66,7 @@ proc newSnake(): Snake =
 proc head(snake: Snake): SnakeSegment =
   snake.body[0]
 
-proc generateFoodPos(game: Game): Point =
+proc generateFoodPos(game: Game): Point[int] =
   result = (random(0 .. levelWidth), random(0 .. levelHeight))
 
 proc createFood(game: Game, kind: FoodKind, foodIndex: int) =
@@ -132,7 +133,7 @@ proc eatFood(game: Game, foodIndex: int) =
   # Update score element.
   game.scoreElement.innerHTML = intToStr(game.score, 7)
 
-proc update*(game: Game, ticks: int) =
+proc update(game: Game) =
   # Used for tracking time.
   game.tick.inc()
 
@@ -154,7 +155,7 @@ proc update*(game: Game, ticks: int) =
   var oldPos = game.player.head.pos.copy()
 
   # Move head in the current direction.
-  let movementVec = game.player.direction.toPoint() * ticks
+  let movementVec = game.player.direction.toPoint()
   game.player.head.pos.add(movementVec)
 
   # Move each body segment with the head.
@@ -172,7 +173,7 @@ proc update*(game: Game, ticks: int) =
   elif game.player.head.pos.y < 0:
     game.player.head.pos.y = levelHeight
 
-proc draw*(game: Game) =
+proc draw(game: Game) =
   game.renderer.fillRect(0, 0, renderWidth, renderHeight, levelBgColor)
 
   var drawSnake = true
@@ -214,3 +215,15 @@ proc draw*(game: Game) =
   else:
     # Snake isn't drawn when game is over, so blink game over text.
     game.gameOverElement.style.display = "block"
+
+proc nextFrame*(game: Game, frameTime: float) =
+  let elapsedTime = frameTime - game.lastUpdate
+
+  const tickLength = 200
+  if elapsedTime > tickLength:
+    game.lastUpdate = frameTime
+    let ticks = round(elapsedTime / tickLength).int
+    for tick in 0 .. <ticks:
+      game.update()
+
+  game.draw()
