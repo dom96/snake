@@ -95,7 +95,7 @@ proc newGame*(): Game =
   result.createFood(Apple, 0)
 
 proc changeDirection*(game: Game, direction: Direction) =
-  if game.player.direction.toPoint() == -direction.toPoint():
+  if toPoint[int](game.player.direction) == -toPoint[int](direction):
     return # Disallow changing direction in opposite direction of travel.
 
   game.player.requestedDirection = direction
@@ -155,7 +155,7 @@ proc update(game: Game) =
   var oldPos = game.player.head.pos.copy()
 
   # Move head in the current direction.
-  let movementVec = game.player.direction.toPoint()
+  let movementVec = toPoint[int](game.player.direction)
   game.player.head.pos.add(movementVec)
 
   # Move each body segment with the head.
@@ -173,7 +173,7 @@ proc update(game: Game) =
   elif game.player.head.pos.y < 0:
     game.player.head.pos.y = levelHeight
 
-proc draw(game: Game) =
+proc draw(game: Game, lag: float) =
   game.renderer.fillRect(0, 0, renderWidth, renderHeight, levelBgColor)
 
   var drawSnake = true
@@ -181,15 +181,10 @@ proc draw(game: Game) =
     drawSnake = false
 
   if drawSnake:
-    for segment in game.player.body:
+    for i in 0 .. <game.player.body.len:
+      let segment = game.player.body[i]
       let pos = segment.pos.toPixelPos()
       game.renderer.fillRect(pos.x, pos.y, segmentSize, segmentSize, "#000000")
-
-    # Draw eyes.
-    # var headPos = game.player.head.pos.toPixelPos()
-    # if game.player.direction in {dirSouth, dirEast}:
-    #   headPos.add((segmentSize-2, segmentSize-2))
-    # game.renderer.fillRect(headPos.x, headPos.y, 2, 2, "#ffffff")
 
   # Draw the food.
   for i in 0 .. game.food.high:
@@ -220,10 +215,11 @@ proc nextFrame*(game: Game, frameTime: float) =
   let elapsedTime = frameTime - game.lastUpdate
 
   const tickLength = 200
+  let ticks = floor(elapsedTime / tickLength).int
+  let lag = (elapsedTime / tickLength) - ticks.float
   if elapsedTime > tickLength:
     game.lastUpdate = frameTime
-    let ticks = round(elapsedTime / tickLength).int
     for tick in 0 .. <ticks:
       game.update()
 
-  game.draw()
+  game.draw(lag)
