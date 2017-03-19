@@ -36,6 +36,7 @@ const
 
 const
   levelBgColor = "#b2bd08"
+  font = "monospace"
 
 proc newSnakeSegment(pos: Point): SnakeSegment =
   result = SnakeSegment(
@@ -167,6 +168,12 @@ proc draw*(game: Game) =
       let pos = segment.pos.toPixelPos()
       game.renderer.fillRect(pos.x, pos.y, segmentSize, segmentSize, "#000000")
 
+    # Draw eyes.
+    # var headPos = game.player.head.pos.toPixelPos()
+    # if game.player.direction in {dirSouth, dirEast}:
+    #   headPos.add((segmentSize-2, segmentSize-2))
+    # game.renderer.fillRect(headPos.x, headPos.y, 2, 2, "#ffffff")
+
   # Draw the food.
   for i in 0 .. game.food.high:
     if not game.food[i].isNil:
@@ -186,17 +193,17 @@ proc draw*(game: Game) =
                            scoreSidebarWidth - 5, renderHeight - 10,
                            lineWidth = 2)
 
-  game.renderer.fillText("SCORE", (renderWidth - scoreSidebarWidth + 25, 25),
-                         "#000000", "14px monospace")
+  game.renderer.fillText("score", (renderWidth - scoreSidebarWidth + 25, 25),
+                         "#000000", "14px " & font)
   game.renderer.fillText(intToStr(game.score, 5),
                          (renderWidth - scoreSidebarWidth + 25, 45),
-                         "#000000", "14px monospace")
+                         "#000000", "14px " & font)
 
   if not drawSnake:
     # Draw Game Over text.
-    game.renderer.fillText("GAME",
+    game.renderer.fillText("game",
                            (renderWidth - scoreSidebarWidth + 23, 100),
-                            "#000000", "20px monospace")
-    game.renderer.fillText("OVER",
+                            "#000000", "20px " & font)
+    game.renderer.fillText("over",
                            (renderWidth - scoreSidebarWidth + 23, 120),
-                            "#000000", "20px monospace")
+                            "#000000", "20px " & font)

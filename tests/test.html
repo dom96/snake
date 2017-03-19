@@ -5,6 +5,20 @@
     <title>Nim snake!</title>
     <script type="text/javascript" src="snake.js"></script>
     <style type="text/css">
+      @font-face {
+        font-family: 'Snake';
+        src: url("font.woff") format("woff"),
+             url("font.ttf") format("truetype");
+        font-weight: normal;
+        font-style: normal;
+      }
+
+      body {
+        margin: 0;
+        overflow: hidden;
+        font-family: Snake, monospace;
+      }
+
       #snake {
         display: flex;
         justify-content: center;
@@ -13,7 +27,7 @@
       }
     </style>
   </head>
-  <body onload="onLoad();" style="margin: 0; overflow: hidden;">
+  <body onload="onLoad();">
     <div id="snake">
       <canvas id="canvas"></canvas>
     </div>
