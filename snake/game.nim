@@ -211,13 +211,17 @@ proc draw(game: Game, lag: float) =
     # Snake isn't drawn when game is over, so blink game over text.
     game.gameOverElement.style.display = "block"
 
+proc getTickLength(game: Game): float =
+  result = 200.0
+  if game.player.alive:
+    result -= game.score.float
+
 proc nextFrame*(game: Game, frameTime: float) =
   let elapsedTime = frameTime - game.lastUpdate
 
-  const tickLength = 200
-  let ticks = floor(elapsedTime / tickLength).int
-  let lag = (elapsedTime / tickLength) - ticks.float
-  if elapsedTime > tickLength:
+  let ticks = floor(elapsedTime / game.getTickLength).int
+  let lag = (elapsedTime / game.getTickLength) - ticks.float
+  if elapsedTime > game.getTickLength:
     game.lastUpdate = frameTime
     for tick in 0 .. <ticks:
       game.update()
