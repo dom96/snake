@@ -1,4 +1,4 @@
-import jsconsole, random, strutils, dom, math
+import jsconsole, random, strutils, dom, math, colors
 
 import gamelight/[graphics, geometry, vec]
 
@@ -173,6 +173,26 @@ proc update(game: Game) =
   elif game.player.head.pos.y < 0:
     game.player.head.pos.y = levelHeight
 
+proc drawFood(game: Game, food: Food) =
+  const nibble = [
+    0, 0, 0, 1, 1, 1, 1, 0, 0, 0,
+    0, 0, 0, 1, 1, 1, 1, 0, 0, 0,
+    0, 0, 0, 1, 1, 1, 1, 0, 0, 0,
+    1, 1, 1, 0, 0, 0, 0, 1, 1, 1,
+    1, 1, 1, 0, 0, 0, 0, 1, 1, 1,
+    1, 1, 1, 0, 0, 0, 0, 1, 1, 1,
+    1, 1, 1, 0, 0, 0, 0, 1, 1, 1,
+    0, 0, 0, 1, 1, 1, 1, 0, 0, 0,
+    0, 0, 0, 1, 1, 1, 1, 0, 0, 0,
+    0, 0, 0, 1, 1, 1, 1, 0, 0, 0,
+  ]
+
+  var pos = food.pos.toPixelPos()
+  for x in 0 .. <segmentSize:
+    for y in 0 .. <segmentSize:
+      if nibble[x + (y * segmentSize)] == 1:
+        game.renderer[(pos.x + x, pos.y + y)] = colBlack
+
 proc draw(game: Game, lag: float) =
   game.renderer.fillRect(0, 0, renderWidth, renderHeight, levelBgColor)
 
@@ -190,12 +210,7 @@ proc draw(game: Game, lag: float) =
   for i in 0 .. game.food.high:
     if not game.food[i].isNil:
       var pos = game.food[i].pos.toPixelPos()
-      pos.y += segmentSize
-      let emoji =
-        case game.food[i].kind
-        of Apple: "🍎"
-        of Cherry: "🍒"
-      game.renderer.fillText(emoji, pos, font="$1px Helvetica" % $segmentSize)
+      game.drawFood(game.food[i])
 
   # Draw the scoreboard.
   game.renderer.fillRect(renderWidth - scoreSidebarWidth, 0, scoreSidebarWidth,
