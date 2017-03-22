@@ -20,20 +20,20 @@ type
     alive: bool
 
   SnakeSegment = ref object
-    pos: Point[int] ## Position in level. Not in pixels but segment units.
+    pos: Point[float] ## Position in level. Not in pixels but segment units.
 
   FoodKind = enum
     Apple, Cherry
 
   Food = ref object
     kind: FoodKind
-    pos: Point[int] ## Position in level. Not in pixels but segment units.
+    pos: Point[float] ## Position in level. Not in pixels but segment units.
 
 const
   segmentSize = 10 ## In pixels
-  levelWidth = 30 ## In segments
-  levelHeight = 18 ## In Segments
-  scoreSidebarWidth = 100
+  levelWidth = 30.0 ## In segments
+  levelHeight = 18.0 ## In Segments
+  scoreSidebarWidth = 100.0
   renderWidth = segmentSize * levelWidth + scoreSidebarWidth ## In pixels
   renderHeight = segmentSize * levelHeight ## In pixels
 
@@ -41,20 +41,20 @@ const
   levelBgColor = "#b2bd08"
   font = "Snake"
 
-proc newSnakeSegment(pos: Point[int]): SnakeSegment =
+proc newSnakeSegment(pos: Point[float]): SnakeSegment =
   result = SnakeSegment(
     pos: pos
   )
 
-proc toPixelPos(pos: Point[int]): Point[int] =
+proc toPixelPos(pos: Point[float]): Point[float] =
   assert pos.x <= levelWidth
   assert pos.y <= levelHeight
   return pos * segmentSize
 
 proc newSnake(): Snake =
-  let head = newSnakeSegment((0, levelHeight div 2))
-  let segment = newSnakeSegment((-1, levelHeight div 2))
-  let segment2 = newSnakeSegment((-2, levelHeight div 2))
+  let head = newSnakeSegment((0.0, levelHeight / 2))
+  let segment = newSnakeSegment((-1.0, levelHeight / 2))
+  let segment2 = newSnakeSegment((-2.0, levelHeight / 2))
 
   result = Snake(
     direction: dirEast,
@@ -66,8 +66,8 @@ proc newSnake(): Snake =
 proc head(snake: Snake): SnakeSegment =
   snake.body[0]
 
-proc generateFoodPos(game: Game): Point[int] =
-  result = (random(0 .. levelWidth), random(0 .. levelHeight))
+proc generateFoodPos(game: Game): Point[float] =
+  result = (random(0.0 .. levelWidth), random(0.0 .. levelHeight))
 
 proc createFood(game: Game, kind: FoodKind, foodIndex: int) =
   let pos = generateFoodPos(game)
@@ -77,25 +77,25 @@ proc createFood(game: Game, kind: FoodKind, foodIndex: int) =
 proc newGame*(): Game =
   randomize()
   result = Game(
-    renderer: newRenderer2D("canvas", renderWidth, renderHeight),
+    renderer: newRenderer2D("canvas", renderWidth.int, renderHeight.int),
     player: newSnake()
   )
 
   # Create text element nodes to show score and other messages.
-  let scoreTextPos = (renderWidth - scoreSidebarWidth + 25, 10)
+  let scoreTextPos = (renderWidth - scoreSidebarWidth + 25, 10.0)
   discard result.renderer.createTextElement("score", scoreTextPos, "#000000",
                                             "24px " & font)
-  let scorePos = (renderWidth - scoreSidebarWidth + 25, 35)
+  let scorePos = (renderWidth - scoreSidebarWidth + 25, 35.0)
   result.scoreElement = result.renderer.createTextElement("0000000", scorePos,
                          "#000000", "14px " & font)
-  let gameOverTextPos = (renderWidth - scoreSidebarWidth + 23, 70)
+  let gameOverTextPos = (renderWidth - scoreSidebarWidth + 23, 70.0)
   result.gameOverElement = result.renderer.createTextElement("game<br/>over",
                            gameOverTextPos, "#000000", "26px " & font)
 
   result.createFood(Apple, 0)
 
 proc changeDirection*(game: Game, direction: Direction) =
-  if toPoint[int](game.player.direction) == -toPoint[int](direction):
+  if toPoint[float](game.player.direction) == -toPoint[float](direction):
     return # Disallow changing direction in opposite direction of travel.
 
   game.player.requestedDirection = direction
@@ -155,7 +155,7 @@ proc update(game: Game) =
   var oldPos = game.player.head.pos.copy()
 
   # Move head in the current direction.
-  let movementVec = toPoint[int](game.player.direction)
+  let movementVec = toPoint[float](game.player.direction)
   game.player.head.pos.add(movementVec)
 
   # Move each body segment with the head.
@@ -186,15 +186,29 @@ proc drawFood(game: Game, food: Food) =
     0, 0, 0, 1, 1, 1, 1, 0, 0, 0,
     0, 0, 0, 1, 1, 1, 1, 0, 0, 0,
   ]
-
   var pos = food.pos.toPixelPos()
   for x in 0 .. <segmentSize:
     for y in 0 .. <segmentSize:
       if nibble[x + (y * segmentSize)] == 1:
-        game.renderer[(pos.x + x, pos.y + y)] = colBlack
+        game.renderer[(pos.x + x.float, pos.y + y.float)] = colBlack
+
+proc drawEyes(game: Game) =
+  let headPos = game.player.head.pos.toPixelPos()
+  let headMiddle = headPos + (segmentSize / 2, segmentSize / 2)
+  let eyeTop = (headPos.x + (segmentSize / 2), headPos.y + 2).toPoint().
+               rotate(game.player.direction.angle, headMiddle)
+  let eyeBot = (headPos.x + (segmentSize / 2), headPos.y + 6).toPoint().
+               rotate(game.player.direction.angle, headMiddle)
+  for eye in [eyeTop, eyeBot]:
+    game.renderer[(eye.x    , eye.y    )] = colWhite
+    game.renderer[(eye.x + 1, eye.y    )] = colWhite
+    game.renderer[(eye.x    , eye.y + 1)] = colWhite
+    game.renderer[(eye.x + 1, eye.y + 1)] = colWhite
+
+  game.renderer[(headMiddle.x, headMiddle.y)] = colRed
 
 proc draw(game: Game, lag: float) =
-  game.renderer.fillRect(0, 0, renderWidth, renderHeight, levelBgColor)
+  game.renderer.fillRect(0.0, 0.0, renderWidth, renderHeight, levelBgColor)
 
   var drawSnake = true
   if (not game.player.alive) and game.tick mod 4 == 0:
@@ -205,6 +219,8 @@ proc draw(game: Game, lag: float) =
       let segment = game.player.body[i]
       let pos = segment.pos.toPixelPos()
       game.renderer.fillRect(pos.x, pos.y, segmentSize, segmentSize, "#000000")
+
+    game.drawEyes()
 
   # Draw the food.
   for i in 0 .. game.food.high:
