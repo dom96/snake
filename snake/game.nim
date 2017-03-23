@@ -195,14 +195,6 @@ proc drawFood(game: Game, food: Food) =
       if nibble[x + (y * segmentSize)] == 1:
         game.renderer[(pos.x + x.float, pos.y + y.float)] = colBlack
 
-proc drawTest(game: Game) =
-  for x in 0 .. <segmentSize:
-    var pos = (50 + x.float, 54.0).toPoint()
-    pos = pos.rotate(PI*2, (54.5, 54.0).toPoint())
-    pos.x = round(pos.x)
-    pos.y = round(pos.y)
-    game.renderer[pos] = colRed
-
 proc drawEyes(game: Game) =
   let angle = game.player.direction.angle
   let headPos = game.player.head.pos.toPixelPos()
@@ -220,8 +212,6 @@ proc drawEyes(game: Game) =
     ]
     for point in rect:
       game.renderer[point] = colWhite
-
-  #drawTest(game)
 
 proc draw(game: Game, lag: float) =
   game.renderer.fillRect(0.0, 0.0, renderWidth, renderHeight, levelBgColor)
