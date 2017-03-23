@@ -220,6 +220,12 @@ proc draw(game: Game, lag: float) =
   if (not game.player.alive) and game.tick mod 4 == 0:
     drawSnake = false
 
+  # Draw the food.
+  for i in 0 .. game.food.high:
+    if not game.food[i].isNil:
+      var pos = game.food[i].pos.toPixelPos()
+      game.drawFood(game.food[i])
+
   if drawSnake:
     for i in 0 .. <game.player.body.len:
       let segment = game.player.body[i]
@@ -227,12 +233,6 @@ proc draw(game: Game, lag: float) =
       game.renderer.fillRect(pos.x, pos.y, segmentSize, segmentSize, "#000000")
 
     game.drawEyes()
-
-  # Draw the food.
-  for i in 0 .. game.food.high:
-    if not game.food[i].isNil:
-      var pos = game.food[i].pos.toPixelPos()
-      game.drawFood(game.food[i])
 
   # Draw the scoreboard.
   game.renderer.fillRect(renderWidth - scoreSidebarWidth, 0, scoreSidebarWidth,
