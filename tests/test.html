@@ -20,16 +20,23 @@
       }
 
       #snake {
+        border: 1px solid black;
+        height: 180px;
+      }
+
+      #center {
         display: flex;
         justify-content: center;
         align-items: center;
-        border: 1px solid black;
+        height: 400px;
       }
     </style>
   </head>
   <body onload="onLoad();">
-    <div id="snake">
-      <canvas id="canvas"></canvas>
+    <div id="center">
+      <div id="snake">
+        <canvas id="canvas"></canvas>
+      </div>
     </div>
   </body>
 </html>
