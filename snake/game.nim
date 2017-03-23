@@ -67,7 +67,10 @@ proc head(snake: Snake): SnakeSegment =
   snake.body[0]
 
 proc generateFoodPos(game: Game): Point[float] =
-  result = (random(0.0 .. levelWidth), random(0.0 .. levelHeight))
+  result = (
+    random(0 .. levelWidth.int).float,
+    random(0 .. levelHeight.int).float
+  )
 
 proc createFood(game: Game, kind: FoodKind, foodIndex: int) =
   let pos = generateFoodPos(game)
@@ -192,20 +195,33 @@ proc drawFood(game: Game, food: Food) =
       if nibble[x + (y * segmentSize)] == 1:
         game.renderer[(pos.x + x.float, pos.y + y.float)] = colBlack
 
-proc drawEyes(game: Game) =
-  let headPos = game.player.head.pos.toPixelPos()
-  let headMiddle = headPos + (segmentSize / 2, segmentSize / 2)
-  let eyeTop = (headPos.x + (segmentSize / 2), headPos.y + 2).toPoint().
-               rotate(game.player.direction.angle, headMiddle)
-  let eyeBot = (headPos.x + (segmentSize / 2), headPos.y + 6).toPoint().
-               rotate(game.player.direction.angle, headMiddle)
-  for eye in [eyeTop, eyeBot]:
-    game.renderer[(eye.x    , eye.y    )] = colWhite
-    game.renderer[(eye.x + 1, eye.y    )] = colWhite
-    game.renderer[(eye.x    , eye.y + 1)] = colWhite
-    game.renderer[(eye.x + 1, eye.y + 1)] = colWhite
+proc drawTest(game: Game) =
+  for x in 0 .. <segmentSize:
+    var pos = (50 + x.float, 54.0).toPoint()
+    pos = pos.rotate(PI*2, (54.5, 54.0).toPoint())
+    pos.x = round(pos.x)
+    pos.y = round(pos.y)
+    game.renderer[pos] = colRed
 
-  game.renderer[(headMiddle.x, headMiddle.y)] = colRed
+proc drawEyes(game: Game) =
+  let angle = game.player.direction.angle
+  let headPos = game.player.head.pos.toPixelPos()
+  let headMiddle = headPos + ((segmentSize-1) / 2, (segmentSize-1) / 2)
+
+  let eyeTop = (headPos.x + 5.0, headPos.y + 2).toPoint()
+  let eyeBot = (headPos.x + 5.0, headPos.y + 6).toPoint()
+
+  for eye in [eyeTop, eyeBot]:
+    let rect = [
+      (eye.x    , eye.y    ).toPoint().rotate(angle, headMiddle),
+      (eye.x + 1, eye.y    ).toPoint().rotate(angle, headMiddle),
+      (eye.x    , eye.y + 1).toPoint().rotate(angle, headMiddle),
+      (eye.x + 1, eye.y + 1).toPoint().rotate(angle, headMiddle)
+    ]
+    for point in rect:
+      game.renderer[point] = colWhite
+
+  #drawTest(game)
 
 proc draw(game: Game, lag: float) =
   game.renderer.fillRect(0.0, 0.0, renderWidth, renderHeight, levelBgColor)
