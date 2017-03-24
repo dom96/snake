@@ -100,11 +100,10 @@ proc newGame*(): Game =
 proc changeDirection*(game: Game, direction: Direction) =
   if game.player.requestedDirections.len >= 2:
     return
-  
+
   game.player.requestedDirections.addLast(direction)
 
 proc processDirections(game: Game) =
-  console.log($game.player.requestedDirections)
   while game.player.requestedDirections.len > 0:
     let direction = game.player.requestedDirections.popFirst()
     if toPoint[float](game.player.direction) == -toPoint[float](direction):
