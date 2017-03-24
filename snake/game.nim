@@ -1,4 +1,4 @@
-import jsconsole, random, strutils, dom, math, colors
+import jsconsole, random, strutils, dom, math, colors, deques
 
 import gamelight/[graphics, geometry, vec]
 
@@ -15,7 +15,7 @@ type
 
   Snake = ref object
     direction: Direction
-    requestedDirection: Direction
+    requestedDirections: Deque[Direction]
     body: seq[SnakeSegment]
     alive: bool
 
@@ -58,7 +58,7 @@ proc newSnake(): Snake =
 
   result = Snake(
     direction: dirEast,
-    requestedDirection: dirEast,
+    requestedDirections: initDeque[Direction](),
     body: @[head, segment, segment2],
     alive: true
   )
@@ -98,10 +98,21 @@ proc newGame*(): Game =
   result.createFood(Apple, 0)
 
 proc changeDirection*(game: Game, direction: Direction) =
-  if toPoint[float](game.player.direction) == -toPoint[float](direction):
+  var lastDirection = game.player.direction
+  if game.player.requestedDirections.len > 0:
+    lastDirection = game.player.requestedDirections[^1]
+  if toPoint[float](lastDirection) == -toPoint[float](direction):
     return # Disallow changing direction in opposite direction of travel.
 
-  game.player.requestedDirection = direction
+  game.player.requestedDirections.addLast(direction)
+
+proc processDirections(game: Game) =
+  console.log($game.player.requestedDirections)
+  while game.player.requestedDirections.len > 0:
+    let direction = game.player.requestedDirections.popFirst()
+    if direction != game.player.direction:
+      game.player.direction = direction
+      break
 
 proc detectHeadCollision(game: Game): bool =
   # Check if head collides with any other segment.
@@ -152,7 +163,7 @@ proc update(game: Game) =
     game.eatFood(foodCollision)
 
   # Change direction.
-  game.player.direction = game.player.requestedDirection
+  processDirections(game)
 
   # Save old position of head.
   var oldPos = game.player.head.pos.copy()
