@@ -98,6 +98,9 @@ proc newGame*(): Game =
   result.createFood(Apple, 0)
 
 proc changeDirection*(game: Game, direction: Direction) =
+  if game.player.requestedDirections.len >= 2:
+    return
+  
   game.player.requestedDirections.addLast(direction)
 
 proc processDirections(game: Game) =
