@@ -98,18 +98,15 @@ proc newGame*(): Game =
   result.createFood(Apple, 0)
 
 proc changeDirection*(game: Game, direction: Direction) =
-  var lastDirection = game.player.direction
-  if game.player.requestedDirections.len > 0:
-    lastDirection = game.player.requestedDirections[^1]
-  if toPoint[float](lastDirection) == -toPoint[float](direction):
-    return # Disallow changing direction in opposite direction of travel.
-
   game.player.requestedDirections.addLast(direction)
 
 proc processDirections(game: Game) =
   console.log($game.player.requestedDirections)
   while game.player.requestedDirections.len > 0:
     let direction = game.player.requestedDirections.popFirst()
+    if toPoint[float](game.player.direction) == -toPoint[float](direction):
+      continue # Disallow changing direction in opposite direction of travel.
+
     if direction != game.player.direction:
       game.player.direction = direction
       break
