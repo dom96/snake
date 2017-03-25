@@ -13,8 +13,9 @@ type
     score: int
     tick: int
     lastUpdate: float
+    paused: bool
     scoreElement: Element
-    gameOverElement: Element
+    messageElement: Element
     playerCountElement: Element
     highScoreElements: array[5, Element]
     players: seq[Player]
@@ -118,9 +119,9 @@ proc newGame*(): Game =
   let scorePos = (renderWidth - scoreSidebarWidth + 25, 35.0)
   result.scoreElement = result.renderer.createTextElement("0000000", scorePos,
                          "#000000", "14px " & font)
-  let gameOverTextPos = (renderWidth - scoreSidebarWidth + 23, 70.0)
-  result.gameOverElement = result.renderer.createTextElement("game<br/>over",
-                           gameOverTextPos, "#000000", "26px " & font)
+  let messageTextPos = (renderWidth - scoreSidebarWidth + 23, 70.0)
+  result.messageElement = result.renderer.createTextElement("game<br/>over",
+                           messageTextPos, "#000000", "26px " & font)
   let playerCountPos = (renderWidth - scoreSideBarWidth + 15,
                         renderHeight - 25.0)
   result.playerCountElement = result.renderer.createTextElement("",
@@ -130,7 +131,7 @@ proc newGame*(): Game =
     let pos = (renderWidth - scoreSideBarWidth + 15,
                scorePos[1] + y)
     result.highScoreElements[i] = result.renderer.createTextElement("",
-        pos, "#3d3d3d", "12px " & font)
+        pos, "#2d2d2d", "12px " & font)
     let width = scoreSideBarWidth - 30
     result.highScoreElements[i].style.width = $width & "px"
 
@@ -212,6 +213,9 @@ proc update(game: Game) =
   # Used for tracking time.
   game.tick.inc()
 
+  # Return early if paused.
+  if game.paused: return
+
   # Check for collision with itself.
   let headCollision = game.detectHeadCollision()
   if headCollision:
@@ -289,7 +293,7 @@ proc draw(game: Game, lag: float) =
   game.renderer.fillRect(0.0, 0.0, renderWidth, renderHeight, levelBgColor)
 
   var drawSnake = true
-  if (not game.player.alive) and game.tick mod 4 == 0:
+  if (not game.player.alive or game.paused) and game.tick mod 4 != 0:
     drawSnake = false
 
   # Draw the food.
@@ -315,10 +319,18 @@ proc draw(game: Game, lag: float) =
                            lineWidth = 2)
 
   if drawSnake:
-    game.gameOverElement.style.display = "none"
+    game.messageElement.style.display = "none"
+    for element in game.highScoreElements:
+      element.style.display = "block"
   else:
     # Snake isn't drawn when game is over, so blink game over text.
-    game.gameOverElement.style.display = "block"
+    for element in game.highScoreElements:
+      element.style.display = "none"
+    game.messageElement.style.display = "block"
+    if not game.player.alive:
+      game.messageElement.innerHtml = "game<br/>over"
+    if game.paused:
+      game.messageElement.innerHtml = "paused"
 
 proc getTickLength(game: Game): float =
   result = 200.0
@@ -336,3 +348,6 @@ proc nextFrame*(game: Game, frameTime: float) =
       game.update()
 
   game.draw(lag)
+
+proc togglePause*(game: Game) =
+  game.paused = not game.paused

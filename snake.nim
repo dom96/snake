@@ -5,6 +5,7 @@ import gamelight/geometry
 import snake/[game, keyboard]
 
 proc onKeydown(game: Game, ev: Event) =
+  console.log(ev.keyCode)
   let key = ev.keyCode.fromKeyCode()
   console.log("Pressed: ", $key)
 
@@ -18,6 +19,8 @@ proc onKeydown(game: Game, ev: Event) =
     game.changeDirection(dirSouth)
   of Key.LeftArrow:
     game.changeDirection(dirWest)
+  of Key.KeyP, Key.KeySpace:
+    game.togglePause()
   else:
     handled = false
 
