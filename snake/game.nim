@@ -18,9 +18,14 @@ type
     messageElement: Element
     playerCountElement: Element
     highScoreElements: array[5, Element]
+    scene: Scene
     players: seq[Player]
     playersCount: int
     socket: WebSocket
+    nickname: string
+
+  Scene {.pure.} = enum
+    MainMenu, Game
 
   Snake = ref object
     direction: Direction
@@ -108,58 +113,99 @@ proc createFood(game: Game, kind: FoodKind, foodIndex: int) =
 
   game.food[foodIndex] = Food(kind: kind, pos: pos)
 
+proc switchScene(game: Game, scene: Scene) =
+  case scene
+  of Scene.MainMenu:
+    # We do not support moving to previous scene.
+    assert game.scene != Scene.Game
+
+    # Create elements showing "snake" and asking for nickname.
+    var elements: seq[Element] = @[]
+    let snakeTextPos = (renderWidth / 2 - 90, renderHeight / 2 - 70)
+    elements.add game.renderer.createTextElement("snake", snakeTextPos,
+        "#000000", "90px " & font)
+
+    let nameTextPos = (snakeTextPos[0], snakeTextPos[1] + 100)
+    elements.add game.renderer.createTextElement("nick: ", nameTextPos,
+        "#000000", "24px " & font)
+
+    let nameInputPos = (nameTextPos[0] + 50, nameTextPos[1])
+    elements.add game.renderer.createTextBox(nameInputPos)
+    elements[^1].style.width = "80px"
+    elements[^1].style.backgroundColor = "transparent"
+    elements[^1].style.border = "none"
+    elements[^1].style.borderBottom = "2px solid black"
+    elements[^1].style.height = "16px"
+
+    let playBtnPos = (nameInputPos[0] + 90, nameInputPos[1] + 5)
+    elements.add game.renderer.createButton(playBtnPos, "Play")
+
+    elements[^1].addEventListener("click",
+      proc (ev: Event) =
+        game.nickname = $elements[^2].OptionElement.value
+        switchScene(game, Scene.Game)
+
+        for element in elements:
+          element.style.display = "none"
+    )
+
+  of Scene.Game:
+    # Create text element nodes to show score and other messages.
+    let scoreTextPos = (renderWidth - scoreSidebarWidth + 25, 10.0)
+    discard game.renderer.createTextElement("score", scoreTextPos, "#000000",
+                                              "24px " & font)
+    let scorePos = (renderWidth - scoreSidebarWidth + 25, 35.0)
+    game.scoreElement = game.renderer.createTextElement("0000000", scorePos,
+                          "#000000", "14px " & font)
+    let messageTextPos = (renderWidth - scoreSidebarWidth + 23, 70.0)
+    game.messageElement = game.renderer.createTextElement("game<br/>over",
+                            messageTextPos, "#000000", "26px " & font)
+    let playerCountPos = (renderWidth - scoreSideBarWidth + 15,
+                          renderHeight - 25.0)
+    game.playerCountElement = game.renderer.createTextElement("",
+                                playerCountPos, "#1d1d1d", "12px " & font)
+    for i in 0 .. game.highScoreElements.high:
+      let y = (i.float * 15.0) + 30.0
+      let pos = (renderWidth - scoreSideBarWidth + 15,
+                scorePos[1] + y)
+      game.highScoreElements[i] = game.renderer.createTextElement("",
+          pos, "#2d2d2d", "12px " & font)
+      let width = scoreSideBarWidth - 30
+      game.highScoreElements[i].style.width = $width & "px"
+
+    # Create first nibble.
+    game.createFood(Apple, 0)
+
+    # Set up WebSocket connection.
+    game.socket = newWebSocket("ws://localhost:8080", "snake")
+
+    game.socket.onOpen =
+      proc (e: Event) =
+        console.log("Connected to server")
+        let msg = createHelloMessage(game.nickname)
+        game.socket.send(toJson(msg))
+
+    game.socket.onMessage =
+      proc (e: MessageEvent) =
+        processMessage(game, $e.data)
+
+    game.socket.onClose =
+      proc (e: CloseEvent) =
+        console.log("Server closed")
+        game.players = @[]
+
+  game.scene = scene
+
 proc newGame*(): Game =
   randomize()
   result = Game(
     renderer: newRenderer2D("canvas", renderWidth.int, renderHeight.int),
     player: newSnake(),
-    players: @[]
+    players: @[],
+    scene: Scene.MainMenu
   )
 
-  # Create text element nodes to show score and other messages.
-  let scoreTextPos = (renderWidth - scoreSidebarWidth + 25, 10.0)
-  discard result.renderer.createTextElement("score", scoreTextPos, "#000000",
-                                            "24px " & font)
-  let scorePos = (renderWidth - scoreSidebarWidth + 25, 35.0)
-  result.scoreElement = result.renderer.createTextElement("0000000", scorePos,
-                         "#000000", "14px " & font)
-  let messageTextPos = (renderWidth - scoreSidebarWidth + 23, 70.0)
-  result.messageElement = result.renderer.createTextElement("game<br/>over",
-                           messageTextPos, "#000000", "26px " & font)
-  let playerCountPos = (renderWidth - scoreSideBarWidth + 15,
-                        renderHeight - 25.0)
-  result.playerCountElement = result.renderer.createTextElement("",
-                              playerCountPos, "#1d1d1d", "12px " & font)
-  for i in 0 .. result.highScoreElements.high:
-    let y = (i.float * 15.0) + 30.0
-    let pos = (renderWidth - scoreSideBarWidth + 15,
-               scorePos[1] + y)
-    result.highScoreElements[i] = result.renderer.createTextElement("",
-        pos, "#2d2d2d", "12px " & font)
-    let width = scoreSideBarWidth - 30
-    result.highScoreElements[i].style.width = $width & "px"
-
-  # Create first nibble.
-  result.createFood(Apple, 0)
-
-  # Set up WebSocket connection.
-  var capturedResult = result
-  result.socket = newWebSocket("ws://localhost:8080", "snake")
-
-  result.socket.onOpen =
-    proc (e: Event) =
-      console.log("Connected to server")
-      let msg = createHelloMessage("Dom")
-      capturedResult.socket.send(toJson(msg))
-
-  result.socket.onMessage =
-    proc (e: MessageEvent) =
-      processMessage(capturedResult, $e.data)
-
-  result.socket.onClose =
-    proc (e: CloseEvent) =
-      console.log("Server closed")
-      capturedResult.players = @[]
+  switchScene(result, Scene.MainMenu)
 
 proc changeDirection*(game: Game, direction: Direction) =
   if game.player.requestedDirections.len >= 2:
@@ -216,7 +262,7 @@ proc eatFood(game: Game, foodIndex: int) =
 
 proc update(game: Game) =
   # Return early if paused.
-  if game.paused: return
+  if game.paused or game.scene != Scene.Game: return
 
   # Check for collision with itself.
   let headCollision = game.detectHeadCollision()
@@ -292,10 +338,10 @@ proc drawEyes(game: Game) =
     for point in rect:
       game.renderer[point] = colWhite
 
-proc draw(game: Game, lag: float) =
-  # Fill background color.
-  game.renderer.fillRect(0.0, 0.0, renderWidth, renderHeight, levelBgColor)
+proc drawMainMenu(game: Game) =
+  discard
 
+proc drawGame(game: Game) =
   # Determines whether the Game Over/Paused message should be shown.
   let showMessage = not game.player.alive or game.paused
 
@@ -325,10 +371,21 @@ proc draw(game: Game, lag: float) =
   for element in game.highScoreElements:
     element.style.display = if showMessage: "none" else: "block"
 
+  # Show/hide Game Over or Pause message.
   if game.blink and showMessage:
     game.messageElement.style.display = "block"
   else:
     game.messageElement.style.display = "none"
+
+proc draw(game: Game, lag: float) =
+  # Fill background color.
+  game.renderer.fillRect(0.0, 0.0, renderWidth, renderHeight, levelBgColor)
+
+  case game.scene
+  of Scene.MainMenu:
+    drawMainMenu(game)
+  of Scene.Game:
+    drawGame(game)
 
 proc getTickLength(game: Game): float =
   result = 200.0
