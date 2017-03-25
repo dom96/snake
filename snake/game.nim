@@ -18,6 +18,7 @@ type
     playerCountElement: Element
     highScoreElements: array[5, Element]
     players: seq[Player]
+    playersCount: int
     socket: WebSocket
 
   Snake = ref object
@@ -83,11 +84,13 @@ proc processMessage(game: Game, data: string) =
   let msg = parseMessage(data)
   case msg.kind
   of MessageType.PlayerUpdate:
-    console.log("Received ", msg.players.len, " players")
+    console.log("Received ", msg.count, " players")
     game.players = msg.players
+    game.playersCount = msg.count
 
     # Update message in UI.
-    game.playerCountElement.innerHtml = $(game.players.len-1) & " others playing"
+    let count = $(game.playersCount-1)
+    game.playerCountElement.innerHtml = count & " others playing"
 
     # Update high score labels.
     for i in 0 .. <min(game.players.len, 5):

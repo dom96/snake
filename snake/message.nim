@@ -1,4 +1,4 @@
-import json
+import json, algorithm, future
 
 type
   MessageType* {.pure.} = enum
@@ -16,6 +16,7 @@ type
       score*: BiggestInt
     of MessageType.PlayerUpdate:
       players*: seq[Player]
+      count*: int
 
 # TODO: Use marshal module.
 proc parseMessage*(data: string): Message =
@@ -34,6 +35,7 @@ proc parseMessage*(data: string): Message =
         nickname: player["nickname"].getStr(),
         score: player["score"].getNum()
       ))
+    result.count = json["count"].getNum().int
 
 proc toJson*(message: Message): string =
   var json = newJObject()
@@ -52,6 +54,7 @@ proc toJson*(message: Message): string =
         "score": %player.score
       })
     json["players"] = %players
+    json["count"] = %message.count
 
   result = $json
 
@@ -62,7 +65,17 @@ proc createScoreUpdateMessage*(score: int): Message =
   Message(kind: MessageType.ScoreUpdate, score: score)
 
 proc createPlayerUpdateMessage*(players: seq[Player]): Message =
-  Message(kind: MessageType.PlayerUpdate, players: players)
+  # Sort by high score.
+  let sorted = sorted(players, (x, y: Player) => cmp(x.score, y.score),
+                      Descending)
+
+  let selection = sorted[0 .. <min(sorted.len, 5)]
+
+  return Message(
+    kind: MessageType.PlayerUpdate,
+    players: selection,
+    count: players.len
+  )
 
 proc initPlayer*(): Player =
   Player(nickname: "Unknown", score: 0)
