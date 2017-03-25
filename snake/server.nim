@@ -57,9 +57,12 @@ proc processMessage(client: Client, data: string) {.async.} =
     client.player.nickname = msg.nickname
     # Verify nickname is valid.
     # TODO: Check for swear words? :)
-    if client.player.nickname.len notin 2 .. 8:
-      warn("Bad nickname for ", $client)
-      client.connected = false
+    if client.player.nickname.len < 2:
+      warn("Nickname too short, changing to Anon")
+      client.player.nickname = "Anon"
+    if client.player.nickname.len > 8:
+      warn("Nickname too long, truncating")
+      client.player.nickname = client.player.nickname[0 .. 8]
   of MessageType.ScoreUpdate:
     client.player.score = msg.score
     # Validate score.
