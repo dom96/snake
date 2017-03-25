@@ -7,5 +7,5 @@ license       = "MIT"
 
 # Dependencies
 
-requires "nim >= 0.16.0", "gamelight"
+requires "nim >= 0.16.0", "gamelight", "websocket"
 
