@@ -302,7 +302,6 @@ proc draw(game: Game, lag: float) =
   # Draw the food.
   for i in 0 .. game.food.high:
     if not game.food[i].isNil:
-      var pos = game.food[i].pos.toPixelPos()
       game.drawFood(game.food[i])
 
   # Draw snake.
@@ -326,7 +325,7 @@ proc draw(game: Game, lag: float) =
   for element in game.highScoreElements:
     element.style.display = if showMessage: "none" else: "block"
 
-  if not game.blink and showMessage:
+  if game.blink and showMessage:
     game.messageElement.style.display = "block"
   else:
     game.messageElement.style.display = "none"
