@@ -242,6 +242,14 @@ proc detectFoodCollision(game: Game): int =
 
   return -1
 
+proc updateScore(game: Game) =
+  # Update score element.
+  game.scoreElement.innerHTML = intToStr(game.score, 7)
+
+  # Update server.
+  let msg = createScoreUpdateMessage(game.score)
+  game.socket.send(toJson(msg))
+
 proc eatFood(game: Game, foodIndex: int) =
   let tailPos = game.player.body[^1].pos.copy()
   game.player.body.add(newSnakeSegment(tailPos))
@@ -255,12 +263,7 @@ proc eatFood(game: Game, foodIndex: int) =
 
   game.createFood(Apple, 0)
 
-  # Update score element.
-  game.scoreElement.innerHTML = intToStr(game.score, 7)
-
-  # Update server.
-  let msg = createScoreUpdateMessage(game.score)
-  game.socket.send(toJson(msg))
+  game.updateScore()
 
 proc update(game: Game) =
   # Return early if paused.
@@ -417,3 +420,9 @@ proc togglePause*(game: Game) =
   if not game.player.alive: return
   game.paused = not game.paused
   game.messageElement.innerHtml = "paused"
+
+proc restart*(game: Game) =
+  game.player = newSnake()
+  game.score = 0
+
+  updateScore(game)

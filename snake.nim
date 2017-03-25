@@ -21,6 +21,8 @@ proc onKeydown(game: Game, ev: Event) =
     game.changeDirection(dirWest)
   of Key.KeyP, Key.KeySpace:
     game.togglePause()
+  of Key.KeyN:
+    game.restart()
   else:
     handled = false
 
