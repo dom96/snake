@@ -11,8 +11,9 @@ type
     player: Snake
     food: array[2, Food]
     score: int
-    lastUpdate: float
+    lastUpdate, lastBlink: float
     paused: bool
+    blink: bool
     scoreElement: Element
     messageElement: Element
     playerCountElement: Element
@@ -48,6 +49,7 @@ const
 const
   levelBgColor = "#b2bd08"
   font = "Snake"
+  blinkTime = 800 # ms
 
 proc newSnakeSegment(pos: Point[float]): SnakeSegment =
   result = SnakeSegment(
@@ -137,6 +139,7 @@ proc newGame*(): Game =
     let width = scoreSideBarWidth - 30
     result.highScoreElements[i].style.width = $width & "px"
 
+  # Create first nibble.
   result.createFood(Apple, 0)
 
   # Set up WebSocket connection.
@@ -219,6 +222,7 @@ proc update(game: Game) =
   let headCollision = game.detectHeadCollision()
   if headCollision:
     game.player.alive = false
+    game.messageElement.innerHtml = "game<br/>over"
     return
 
   # Check for food collision.
@@ -289,7 +293,11 @@ proc drawEyes(game: Game) =
       game.renderer[point] = colWhite
 
 proc draw(game: Game, lag: float) =
+  # Fill background color.
   game.renderer.fillRect(0.0, 0.0, renderWidth, renderHeight, levelBgColor)
+
+  # Determines whether the Game Over/Paused message should be shown.
+  let showMessage = not game.player.alive or game.paused
 
   # Draw the food.
   for i in 0 .. game.food.high:
@@ -297,12 +305,14 @@ proc draw(game: Game, lag: float) =
       var pos = game.food[i].pos.toPixelPos()
       game.drawFood(game.food[i])
 
-  for i in 0 .. <game.player.body.len:
-    let segment = game.player.body[i]
-    let pos = segment.pos.toPixelPos()
-    game.renderer.fillRect(pos.x, pos.y, segmentSize, segmentSize, "#000000")
+  # Draw snake.
+  if not (game.blink and showMessage):
+    for i in 0 .. <game.player.body.len:
+      let segment = game.player.body[i]
+      let pos = segment.pos.toPixelPos()
+      game.renderer.fillRect(pos.x, pos.y, segmentSize, segmentSize, "#000000")
 
-  game.drawEyes()
+    game.drawEyes()
 
   # Draw the scoreboard.
   game.renderer.fillRect(renderWidth - scoreSidebarWidth, 0, scoreSidebarWidth,
@@ -312,19 +322,14 @@ proc draw(game: Game, lag: float) =
                            scoreSidebarWidth - 5, renderHeight - 10,
                            lineWidth = 2)
 
-  if game.player.alive and not game.paused:
-    game.messageElement.style.display = "none"
-    for element in game.highScoreElements:
-      element.style.display = "block"
-  else:
-    # Snake isn't drawn when game is over, so blink game over text.
-    for element in game.highScoreElements:
-      element.style.display = "none"
+  # Show/hide high scores.
+  for element in game.highScoreElements:
+    element.style.display = if showMessage: "none" else: "block"
+
+  if not game.blink and showMessage:
     game.messageElement.style.display = "block"
-    if not game.player.alive:
-      game.messageElement.innerHtml = "game<br/>over"
-    if game.paused:
-      game.messageElement.innerHtml = "paused"
+  else:
+    game.messageElement.style.display = "none"
 
 proc getTickLength(game: Game): float =
   result = 200.0
@@ -332,6 +337,7 @@ proc getTickLength(game: Game): float =
     result -= game.score.float
 
 proc nextFrame*(game: Game, frameTime: float) =
+  # Determine whether we should update.
   let elapsedTime = frameTime - game.lastUpdate
 
   let ticks = floor(elapsedTime / game.getTickLength).int
@@ -341,7 +347,15 @@ proc nextFrame*(game: Game, frameTime: float) =
     for tick in 0 .. <ticks:
       game.update()
 
+  # Blink timer.
+  let elapsedBlinkTime = frameTime - game.lastBlink
+  if elapsedBlinkTime > blinkTime:
+    game.lastBlink = frameTime
+    game.blink = not game.blink
+
   game.draw(lag)
 
 proc togglePause*(game: Game) =
+  if not game.player.alive: return
   game.paused = not game.paused
+  game.messageElement.innerHtml = "paused"
