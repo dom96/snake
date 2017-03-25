@@ -1,5 +1,7 @@
 import jsconsole, random, strutils, dom, math, colors, deques, htmlgen
 
+from xmltree import nil
+
 import gamelight/[graphics, geometry, vec]
 import jswebsockets
 
@@ -102,7 +104,7 @@ proc processMessage(game: Game, data: string) =
     # Update high score labels.
     for i in 0 .. <min(game.players.len, 5):
       let player = game.players[i]
-      let text = span(player.nickname.toLowerAscii(), style="float: left;") &
+      let text = span(xmltree.escape(player.nickname.toLowerAscii()), style="float: left;") &
                  span(intToStr(player.score.int), style="float: right;")
       game.highScoreElements[i].innerHTML = text
 
