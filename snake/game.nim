@@ -1,6 +1,9 @@
 import jsconsole, random, strutils, dom, math, colors, deques
 
 import gamelight/[graphics, geometry, vec]
+import jswebsockets
+
+import message
 
 type
   Game* = ref object
@@ -12,6 +15,8 @@ type
     lastUpdate: float
     scoreElement: Element
     gameOverElement: Element
+    players: seq[Player]
+    socket: WebSocket
 
   Snake = ref object
     direction: Direction
@@ -72,6 +77,14 @@ proc generateFoodPos(game: Game): Point[float] =
     random(0 .. levelHeight.int).float
   )
 
+proc processMessage(game: Game, data: string) =
+  let msg = parseMessage(data)
+  case msg.kind
+  of MessageType.PlayerUpdate:
+    console.log("Received ", msg.players.len, " players")
+    game.players = msg.players
+  of MessageType.Hello, MessageType.ScoreUpdate: discard
+
 proc createFood(game: Game, kind: FoodKind, foodIndex: int) =
   let pos = generateFoodPos(game)
 
@@ -81,7 +94,8 @@ proc newGame*(): Game =
   randomize()
   result = Game(
     renderer: newRenderer2D("canvas", renderWidth.int, renderHeight.int),
-    player: newSnake()
+    player: newSnake(),
+    players: @[]
   )
 
   # Create text element nodes to show score and other messages.
@@ -96,6 +110,25 @@ proc newGame*(): Game =
                            gameOverTextPos, "#000000", "26px " & font)
 
   result.createFood(Apple, 0)
+
+  # Set up WebSocket connection.
+  var capturedResult = result
+  result.socket = newWebSocket("ws://localhost:8080", "snake")
+
+  result.socket.onOpen =
+    proc (e: Event) =
+      console.log("Connected to server")
+      let msg = createHelloMessage("Dom")
+      capturedResult.socket.send(toJson(msg))
+
+  result.socket.onMessage =
+    proc (e: MessageEvent) =
+      processMessage(capturedResult, $e.data)
+
+  result.socket.onClose =
+    proc (e: CloseEvent) =
+      console.log("Server closed")
+
 
 proc changeDirection*(game: Game, direction: Direction) =
   if game.player.requestedDirections.len >= 2:

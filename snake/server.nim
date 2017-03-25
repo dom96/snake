@@ -16,7 +16,7 @@ type
 proc newClient(socket: AsyncSocket): Client =
   return Client(
     socket: socket,
-    connected: false,
+    connected: true,
     player: initPlayer()
   )
 
