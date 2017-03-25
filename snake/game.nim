@@ -11,7 +11,6 @@ type
     player: Snake
     food: array[2, Food]
     score: int
-    tick: int
     lastUpdate: float
     paused: bool
     scoreElement: Element
@@ -210,9 +209,6 @@ proc eatFood(game: Game, foodIndex: int) =
   game.socket.send(toJson(msg))
 
 proc update(game: Game) =
-  # Used for tracking time.
-  game.tick.inc()
-
   # Return early if paused.
   if game.paused: return
 
@@ -292,23 +288,18 @@ proc drawEyes(game: Game) =
 proc draw(game: Game, lag: float) =
   game.renderer.fillRect(0.0, 0.0, renderWidth, renderHeight, levelBgColor)
 
-  var drawSnake = true
-  if (not game.player.alive or game.paused) and game.tick mod 4 != 0:
-    drawSnake = false
-
   # Draw the food.
   for i in 0 .. game.food.high:
     if not game.food[i].isNil:
       var pos = game.food[i].pos.toPixelPos()
       game.drawFood(game.food[i])
 
-  if drawSnake:
-    for i in 0 .. <game.player.body.len:
-      let segment = game.player.body[i]
-      let pos = segment.pos.toPixelPos()
-      game.renderer.fillRect(pos.x, pos.y, segmentSize, segmentSize, "#000000")
+  for i in 0 .. <game.player.body.len:
+    let segment = game.player.body[i]
+    let pos = segment.pos.toPixelPos()
+    game.renderer.fillRect(pos.x, pos.y, segmentSize, segmentSize, "#000000")
 
-    game.drawEyes()
+  game.drawEyes()
 
   # Draw the scoreboard.
   game.renderer.fillRect(renderWidth - scoreSidebarWidth, 0, scoreSidebarWidth,
@@ -318,7 +309,7 @@ proc draw(game: Game, lag: float) =
                            scoreSidebarWidth - 5, renderHeight - 10,
                            lineWidth = 2)
 
-  if drawSnake:
+  if game.player.alive and not game.paused:
     game.messageElement.style.display = "none"
     for element in game.highScoreElements:
       element.style.display = "block"
