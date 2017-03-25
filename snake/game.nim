@@ -1,4 +1,4 @@
-import jsconsole, random, strutils, dom, math, colors, deques
+import jsconsole, random, strutils, dom, math, colors, deques, htmlgen
 
 import gamelight/[graphics, geometry, vec]
 import jswebsockets
@@ -15,6 +15,8 @@ type
     lastUpdate: float
     scoreElement: Element
     gameOverElement: Element
+    playerCountElement: Element
+    highScoreElements: array[5, Element]
     players: seq[Player]
     socket: WebSocket
 
@@ -83,6 +85,17 @@ proc processMessage(game: Game, data: string) =
   of MessageType.PlayerUpdate:
     console.log("Received ", msg.players.len, " players")
     game.players = msg.players
+
+    # Update message in UI.
+    game.playerCountElement.innerHtml = $(game.players.len-1) & " others playing"
+
+    # Update high score labels.
+    for i in 0 .. <min(game.players.len, 5):
+      let player = game.players[i]
+      let text = span(player.nickname.toLowerAscii(), style="float: left;") &
+                 span(intToStr(player.score.int), style="float: right;")
+      game.highScoreElements[i].innerHTML = text
+
   of MessageType.Hello, MessageType.ScoreUpdate: discard
 
 proc createFood(game: Game, kind: FoodKind, foodIndex: int) =
@@ -108,6 +121,18 @@ proc newGame*(): Game =
   let gameOverTextPos = (renderWidth - scoreSidebarWidth + 23, 70.0)
   result.gameOverElement = result.renderer.createTextElement("game<br/>over",
                            gameOverTextPos, "#000000", "26px " & font)
+  let playerCountPos = (renderWidth - scoreSideBarWidth + 15,
+                        renderHeight - 25.0)
+  result.playerCountElement = result.renderer.createTextElement("",
+                              playerCountPos, "#1d1d1d", "12px " & font)
+  for i in 0 .. result.highScoreElements.high:
+    let y = (i.float * 15.0) + 30.0
+    let pos = (renderWidth - scoreSideBarWidth + 15,
+               scorePos[1] + y)
+    result.highScoreElements[i] = result.renderer.createTextElement("",
+        pos, "#3d3d3d", "12px " & font)
+    let width = scoreSideBarWidth - 30
+    result.highScoreElements[i].style.width = $width & "px"
 
   result.createFood(Apple, 0)
 
@@ -128,7 +153,7 @@ proc newGame*(): Game =
   result.socket.onClose =
     proc (e: CloseEvent) =
       console.log("Server closed")
-
+      capturedResult.players = @[]
 
 proc changeDirection*(game: Game, direction: Direction) =
   if game.player.requestedDirections.len >= 2:
@@ -178,6 +203,10 @@ proc eatFood(game: Game, foodIndex: int) =
 
   # Update score element.
   game.scoreElement.innerHTML = intToStr(game.score, 7)
+
+  # Update server.
+  let msg = createScoreUpdateMessage(game.score)
+  game.socket.send(toJson(msg))
 
 proc update(game: Game) =
   # Used for tracking time.
