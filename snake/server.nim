@@ -12,6 +12,7 @@ type
 
   Server = ref object
     clients: seq[Client]
+    needsUpdate: bool
 
 proc newClient(socket: AsyncSocket): Client =
   return Client(
@@ -27,29 +28,32 @@ proc `$`(client: Client): string =
 proc updateClients(server: Server) {.async.} =
   ## Updates each client with the current player scores every second.
 
-  # TODO: Update only when something changed.
   while true:
-    var newClients: seq[Client] = @[]
-    var players: seq[Player] = @[]
-    for client in server.clients:
-      if not client.connected: continue
+    if server.needsUpdate:
+      info("Updating")
+      var newClients: seq[Client] = @[]
+      var players: seq[Player] = @[]
+      for client in server.clients:
+        if not client.connected: continue
 
-      players.add(client.player)
-      newClients.add(client)
+        players.add(client.player)
+        newClients.add(client)
 
-    # Overwrite with new list containing only connected clients.
-    server.clients = newClients
+      # Overwrite with new list containing only connected clients.
+      server.clients = newClients
 
-    # Send the message to each client.
-    let msg = createPlayerUpdateMessage(players)
-    for client in server.clients:
-      await client.socket.sendText(toJson(msg), false)
+      # Send the message to each client.
+      let msg = createPlayerUpdateMessage(players)
+      for client in server.clients:
+        await client.socket.sendText(toJson(msg), false)
+
+      server.needsUpdate = false
 
     info("$1 clients connected" % $server.clients.len)
     # Wait for 1 second.
     await sleepAsync(1000)
 
-proc processMessage(client: Client, data: string) {.async.} =
+proc processMessage(server: Server, client: Client, data: string) {.async.} =
   ## Process a single message.
   let msg = parseMessage(data)
   case msg.kind
@@ -73,7 +77,9 @@ proc processMessage(client: Client, data: string) {.async.} =
     # The client shouldn't send this.
     client.connected = false
 
-proc processClient(client: Client) {.async.} =
+  server.needsUpdate = true
+
+proc processClient(server: Server, client: Client) {.async.} =
   ## Loop which continuously reads data from the client and processes the
   ## messages which are received.
   while client.connected:
@@ -88,7 +94,7 @@ proc processClient(client: Client) {.async.} =
     let frame = frameFut.read()
     info("Received ", frame.opcode)
     if frame.opcode == Opcode.Text:
-      await processMessage(client, frame.data)
+      await processMessage(server, client, frame.data)
 
   client.socket.close()
 
@@ -97,7 +103,7 @@ proc onRequest(server: Server, req: Request) {.async.} =
   if success:
     info("Client connected")
     server.clients.add(newClient(req.client))
-    asyncCheck processClient(server.clients[^1])
+    asyncCheck processClient(server, server.clients[^1])
   else:
     error("WS negotiation failed: " & error)
     await req.respond(Http400, "WebSocket negotiation failed: " & error)
