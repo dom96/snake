@@ -18,6 +18,7 @@ type
     blink: bool
     nextSpecial: float # ms until next special food is shown.
     scoreElement: Element
+    allTimeTextElement, allTimeScoreElement: Element
     messageElement: Element
     playerCountElement: Element
     highScoreElements: array[5, Element]
@@ -53,6 +54,8 @@ const
   levelWidth = 30.0 ## In segments
   levelHeight = 18.0 ## In Segments
   scoreSidebarWidth = 100.0
+  scoreTextWidth = scoreSideBarWidth - 30
+  allTimeScoreTop = 55.0
   renderWidth = segmentSize * levelWidth + scoreSidebarWidth ## In pixels
   renderHeight = segmentSize * levelHeight ## In pixels
 
@@ -103,6 +106,12 @@ proc generateFoodPos(game: Game): Point[float] =
     if not hit: break
     i.inc()
 
+proc createHighScoreText(player: Player): string =
+  let nickname = xmltree.escape(player.nickname.toLowerAscii())
+  let text = span(nickname, style="float: left;") &
+             span(intToStr(player.score.int), style="float: right;")
+  return text
+
 proc processMessage(game: Game, data: string) =
   let msg = parseMessage(data)
   case msg.kind
@@ -119,12 +128,12 @@ proc processMessage(game: Game, data: string) =
     for i in 0 .. <game.highScoreElements.high:
       if i < len(game.players):
         let player = game.players[i]
-        let nickname = xmltree.escape(player.nickname.toLowerAscii())
-        let text = span(nickname, style="float: left;") &
-                  span(intToStr(player.score.int), style="float: right;")
-        game.highScoreElements[i].innerHTML = text
+        game.highScoreElements[i].innerHTML = createHighScoreText(player)
       else:
         game.highScoreElements[i].innerHTML = ""
+
+    # Update top score.
+    game.allTimeScoreElement.innerHTML = createHighScoreText(msg.top)
 
   of MessageType.Hello, MessageType.ScoreUpdate: discard
 
@@ -200,28 +209,43 @@ proc switchScene(game: Game, scene: Scene) =
     if not game.onGameStart.isNil:
       game.onGameStart(game)
 
-    # Create text element nodes to show score and other messages.
+    # Create text element nodes to show player score.
     let scoreTextPos = (renderWidth - scoreSidebarWidth + 25, 10.0)
     discard game.renderer.createTextElement("score", scoreTextPos, "#000000",
                                               "24px " & font)
     let scorePos = (renderWidth - scoreSidebarWidth + 25, 35.0)
     game.scoreElement = game.renderer.createTextElement("0000000", scorePos,
                           "#000000", "14px " & font)
+
+    # Create all time high score elements.
+    let allTimePos = (renderWidth - scoreSidebarWidth + 17, allTimeScoreTop)
+    game.allTimeTextElement = game.renderer.createTextElement(
+        "all time high score", allTimePos, levelBgColor, "10px " & font)
+    let allTimeScorePos = (renderWidth - scoreSidebarWidth + 15,
+                           allTimePos[1] + 10.0)
+    game.allTimeScoreElement = game.renderer.createTextElement("",
+        allTimeScorePos, levelBgColor, "12px " & font)
+    game.allTimeScoreElement.style.width = $scoreTextWidth & "px"
+
+    # Create element to show game over/paused message.
     let messageTextPos = (renderWidth - scoreSidebarWidth + 23, 70.0)
     game.messageElement = game.renderer.createTextElement("game<br/>over",
                             messageTextPos, "#000000", "26px " & font)
+
+    # Create element to show current player count.
     let playerCountPos = (renderWidth - scoreSideBarWidth + 15,
                           renderHeight - 25.0)
     game.playerCountElement = game.renderer.createTextElement("",
                                 playerCountPos, "#1d1d1d", "12px " & font)
+
+    # Create a high score elements.
     for i in 0 .. game.highScoreElements.high:
-      let y = (i.float * 15.0) + 30.0
+      let y = (i.float * 15.0) + allTimeScoreTop
       let pos = (renderWidth - scoreSideBarWidth + 15,
                 scorePos[1] + y)
       game.highScoreElements[i] = game.renderer.createTextElement("",
           pos, "#2d2d2d", "12px " & font)
-      let width = scoreSideBarWidth - 30
-      game.highScoreElements[i].style.width = $width & "px"
+      game.highScoreElements[i].style.width = $scoreTextWidth & "px"
 
     # Create first nibble.
     game.createFood(Nibble, 0)
@@ -458,6 +482,9 @@ proc drawGame(game: Game) =
   game.renderer.strokeRect(renderWidth - scoreSidebarWidth, 5,
                            scoreSidebarWidth - 5, renderHeight - 10,
                            lineWidth = 2)
+
+  game.renderer.fillRect(renderWidth - scoreSidebarWidth, allTimeScoreTop - 2,
+                         scoreSidebarWidth - 5, 25.0)
 
   # Show/hide high scores.
   for element in game.highScoreElements:

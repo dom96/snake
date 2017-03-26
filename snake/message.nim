@@ -17,8 +17,16 @@ type
     of MessageType.PlayerUpdate:
       players*: seq[Player]
       count*: int
+      top*: Player
 
 # TODO: Use marshal module.
+
+proc parsePlayer*(player: JsonNode): Player =
+  Player(
+    nickname: player["nickname"].getStr,
+    score: player["score"].getNum()
+  )
+
 proc parseMessage*(data: string): Message =
   let json = parseJson(data)
 
@@ -31,11 +39,15 @@ proc parseMessage*(data: string): Message =
   of MessageType.PlayerUpdate:
     result.players = @[]
     for player in json["players"]:
-      result.players.add(Player(
-        nickname: player["nickname"].getStr(),
-        score: player["score"].getNum()
-      ))
+      result.players.add(parsePlayer(player))
     result.count = json["count"].getNum().int
+    result.top = parsePlayer(json["top"])
+
+proc `%`(player: Player): JsonNode =
+  %{
+        "nickname": %player.nickname,
+        "score": %player.score
+   }
 
 proc toJson*(message: Message): string =
   var json = newJObject()
@@ -49,12 +61,10 @@ proc toJson*(message: Message): string =
   of MessageType.PlayerUpdate:
     var players: seq[JsonNode] = @[]
     for player in message.players:
-      players.add(%{
-        "nickname": %player.nickname,
-        "score": %player.score
-      })
+      players.add(%player)
     json["players"] = %players
     json["count"] = %message.count
+    json["top"] = %message.top
 
   result = $json
 
@@ -64,7 +74,7 @@ proc createHelloMessage*(nickname: string): Message =
 proc createScoreUpdateMessage*(score: int): Message =
   Message(kind: MessageType.ScoreUpdate, score: score)
 
-proc createPlayerUpdateMessage*(players: seq[Player]): Message =
+proc createPlayerUpdateMessage*(players: seq[Player], top: Player): Message =
   # Sort by high score.
   let sorted = sorted(players, (x, y: Player) => cmp(x.score, y.score),
                       Descending)
@@ -74,7 +84,8 @@ proc createPlayerUpdateMessage*(players: seq[Player]): Message =
   return Message(
     kind: MessageType.PlayerUpdate,
     players: selection,
-    count: players.len
+    count: players.len,
+    top: top
   )
 
 proc initPlayer*(): Player =

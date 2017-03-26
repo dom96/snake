@@ -1,4 +1,5 @@
-import asyncdispatch, asynchttpserver, asyncnet, future, logging, strutils
+import asyncdispatch, asynchttpserver, asyncnet, future, logging, strutils, os
+import times
 
 import websocket
 
@@ -13,6 +14,7 @@ type
   Server = ref object
     clients: seq[Client]
     needsUpdate: bool
+    top: Player ## Highest score ever.
 
 proc newClient(socket: AsyncSocket): Client =
   return Client(
@@ -25,9 +27,10 @@ proc `$`(client: Client): string =
   return "Client(nickname: $1, score: $2)" %
       [client.player.nickname, $client.player.score]
 
+proc getTopScoresFilename(): string = getCurrentDir() / "topscores.snake"
+
 proc updateClients(server: Server) {.async.} =
   ## Updates each client with the current player scores every second.
-
   while true:
     if server.needsUpdate:
       info("Updating")
@@ -43,7 +46,7 @@ proc updateClients(server: Server) {.async.} =
       server.clients = newClients
 
       # Send the message to each client.
-      let msg = createPlayerUpdateMessage(players)
+      let msg = createPlayerUpdateMessage(players, server.top)
       for client in server.clients:
         await client.socket.sendText(toJson(msg), false)
 
@@ -52,6 +55,17 @@ proc updateClients(server: Server) {.async.} =
     info("$1 clients connected" % $server.clients.len)
     # Wait for 1 second.
     await sleepAsync(1000)
+
+proc updateTopScore(server: Server, player: Player) =
+  if server.top.score < player.score:
+    server.top = player
+
+    # Save to topscore.snake.
+    let filename = getTopScoresFilename()
+    let file = open(filename, fmAppend)
+    let time = getGMTime(getTime()).format("yyyy-MM-dd HH:mm:ss")
+    file.write("$1\t$2\t$3\n" %
+        [server.top.nickname, $server.top.score, time])
 
 proc processMessage(server: Server, client: Client, data: string) {.async.} =
   ## Process a single message.
@@ -72,7 +86,12 @@ proc processMessage(server: Server, client: Client, data: string) {.async.} =
     # Validate score.
     if client.player.score.int notin 0 .. 9999:
       warn("Bad score for ", $client)
+      client.player.score = 0
       client.connected = false
+
+    # Update top score
+    updateTopScore(server, client.player)
+
   of MessageType.PlayerUpdate:
     # The client shouldn't send this.
     client.connected = false
@@ -109,6 +128,24 @@ proc onRequest(server: Server, req: Request) {.async.} =
     await req.respond(Http400, "WebSocket negotiation failed: " & error)
     req.client.close()
 
+proc loadTopScore(server: Server) =
+  let filename = getTopScoresFilename()
+  if fileExists(filename):
+    info("Reading top score from ", filename)
+    let topScores = readFile(filename)
+    let latest = topScores.splitLines()[^2]
+    let split = latest.split("\t")
+    server.top = Player(
+      nickname: split[0],
+      score: split[1].parseInt()
+    )
+  else:
+    info("No topscores.snake file found")
+    server.top = Player(
+      nickname: "",
+      score: 0
+    )
+
 when isMainModule:
   # Set up logging to console.
   var consoleLogger = newConsoleLogger()
@@ -119,6 +156,9 @@ when isMainModule:
   let server = Server(
     clients: @[]
   )
+
+  # Load top score.
+  loadTopScore(server)
 
   # Launch the HTTP server.
   const port = Port(25473)
