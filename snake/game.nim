@@ -113,11 +113,15 @@ proc processMessage(game: Game, data: string) =
     game.playerCountElement.innerHtml = count & " others playing"
 
     # Update high score labels.
-    for i in 0 .. <min(game.players.len, 5):
-      let player = game.players[i]
-      let text = span(xmltree.escape(player.nickname.toLowerAscii()), style="float: left;") &
-                 span(intToStr(player.score.int), style="float: right;")
-      game.highScoreElements[i].innerHTML = text
+    for i in 0 .. <game.highScoreElements.high:
+      if i < len(game.players):
+        let player = game.players[i]
+        let nickname = xmltree.escape(player.nickname.toLowerAscii())
+        let text = span(nickname, style="float: left;") &
+                  span(intToStr(player.score.int), style="float: right;")
+        game.highScoreElements[i].innerHTML = text
+      else:
+        game.highScoreElements[i].innerHTML = ""
 
   of MessageType.Hello, MessageType.ScoreUpdate: discard
 
