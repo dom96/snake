@@ -45,7 +45,6 @@ proc onGameStart(game: Game) =
   window.addEventListener("keydown", (ev: Event) => onKeydown(game, ev))
   window.addEventListener("touchstart", (ev: Event) => onTouch(game, ev.TouchEvent))
 
-
 proc onLoad() {.exportc.} =
   var game = newGame()
   game.onGameStart = onGameStart

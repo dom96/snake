@@ -13,9 +13,10 @@ type
     player: Snake
     food: array[2, Food]
     score: int
-    lastUpdate, lastBlink: float
+    lastUpdate, lastBlink, lastSpecial: float
     paused: bool
     blink: bool
+    nextSpecial: float # ms until next special food is shown.
     scoreElement: Element
     messageElement: Element
     playerCountElement: Element
@@ -40,11 +41,12 @@ type
     pos: Point[float] ## Position in level. Not in pixels but segment units.
 
   FoodKind = enum
-    Apple, Cherry
+    Nibble, Special
 
   Food = ref object
     kind: FoodKind
     pos: Point[float] ## Position in level. Not in pixels but segment units.
+    ticksLeft: int ## Amount of updates until food disappears.
 
 const
   segmentSize = 10 ## In pixels
@@ -129,7 +131,9 @@ proc processMessage(game: Game, data: string) =
 proc createFood(game: Game, kind: FoodKind, foodIndex: int) =
   let pos = generateFoodPos(game)
 
-  game.food[foodIndex] = Food(kind: kind, pos: pos)
+  game.food[foodIndex] = Food(kind: kind, pos: pos, ticksLeft: -1)
+  if kind == Special:
+    game.food[foodIndex].ticksLeft = 20
 
 proc switchScene(game: Game, scene: Scene) =
   case scene
@@ -196,7 +200,7 @@ proc switchScene(game: Game, scene: Scene) =
       game.highScoreElements[i].style.width = $width & "px"
 
     # Create first nibble.
-    game.createFood(Apple, 0)
+    game.createFood(Nibble, 0)
 
     # Set up WebSocket connection.
     game.socket = newWebSocket("ws://localhost:25473", "snake")
@@ -289,15 +293,33 @@ proc eatFood(game: Game, foodIndex: int) =
   game.player.body.add(newSnakeSegment(tailPos))
 
   case game.food[foodIndex].kind
-  of Apple:
+  of Nibble:
     game.score += 1
-  of Cherry:
+    game.createFood(Nibble, 0)
+  of Special:
     game.score += 5
-  game.food[foodIndex] = nil
-
-  game.createFood(Apple, 0)
 
   game.updateScore()
+
+proc updateFood(game: Game) =
+  # Expire special food.
+  if not game.food[1].isNil:
+    assert game.food[1].kind == Special
+    game.food[1].ticksLeft.dec()
+
+    if game.food[1].ticksLeft <= 0:
+      game.food[1] = nil
+
+  # Randomly create special food.
+  if game.nextSpecial == 0:
+    game.lastSpecial = game.lastUpdate
+    game.nextSpecial = random(4_000.0 .. 30_000.0)
+
+  if game.lastUpdate - game.lastSpecial >= game.nextSpecial and
+     game.food[1].isNil:
+    game.lastSpecial = game.lastUpdate
+    game.nextSpecial = 0
+    createFood(game, Special, 1)
 
 proc update(game: Game) =
   # Return early if paused.
@@ -340,6 +362,9 @@ proc update(game: Game) =
   elif game.player.head.pos.y < 0:
     game.player.head.pos.y = levelHeight
 
+  # Update food
+  updateFood(game)
+
 proc drawFood(game: Game, food: Food) =
   const nibble = [
     0, 0, 0, 1, 1, 1, 1, 0, 0, 0,
@@ -353,11 +378,32 @@ proc drawFood(game: Game, food: Food) =
     0, 0, 0, 1, 1, 1, 1, 0, 0, 0,
     0, 0, 0, 1, 1, 1, 1, 0, 0, 0,
   ]
+
+  const special = [
+    9, 9, 9, 2, 2, 2, 2, 3, 3, 3,
+    9, 9, 9, 2, 2, 2, 2, 3, 3, 3,
+    9, 9, 9, 2, 2, 2, 2, 3, 3, 3,
+    8, 8, 8, 1, 1, 1, 1, 4, 4, 4,
+    8, 8, 8, 1, 1, 1, 1, 4, 4, 4,
+    8, 8, 8, 1, 1, 1, 1, 4, 4, 1,
+    8, 8, 8, 1, 1, 1, 1, 4, 4, 4,
+    7, 7, 7, 6, 6, 6, 6, 5, 5, 5,
+    7, 7, 7, 6, 6, 6, 6, 5, 5, 5,
+    7, 7, 7, 6, 6, 6, 6, 5, 5, 5,
+  ]
+
   var pos = food.pos.toPixelPos()
   for x in 0 .. <segmentSize:
     for y in 0 .. <segmentSize:
-      if nibble[x + (y * segmentSize)] == 1:
-        game.renderer[(pos.x + x.float, pos.y + y.float)] = colBlack
+      let index = x + (y * segmentSize)
+      let pos = (pos.x + x.float, pos.y + y.float)
+      case food.kind
+      of Nibble:
+        if nibble[index] == 1:
+          game.renderer[pos] = colBlack
+      of Special:
+        if special[index] < food.ticksLeft:
+          game.renderer[pos] = colBlack
 
 proc drawEyes(game: Game) =
   let angle = game.player.direction.angle
