@@ -228,7 +228,7 @@ proc switchScene(game: Game, scene: Scene) =
     game.allTimeScoreElement.style.width = $scoreTextWidth & "px"
 
     # Create element to show game over/paused message.
-    let messageTextPos = (renderWidth - scoreSidebarWidth + 23, 70.0)
+    let messageTextPos = (renderWidth - scoreSidebarWidth + 23, 85.0)
     game.messageElement = game.renderer.createTextElement("game<br/>over",
                             messageTextPos, "#000000", "26px " & font)
 
