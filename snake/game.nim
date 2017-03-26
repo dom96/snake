@@ -446,7 +446,9 @@ proc nextFrame*(game: Game, frameTime: float) =
   game.draw(lag)
 
 proc togglePause*(game: Game) =
+  if game.scene != Scene.Game: return
   if not game.player.alive: return
+  
   game.paused = not game.paused
   game.messageElement.innerHtml = "paused"
 
