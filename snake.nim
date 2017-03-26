@@ -32,7 +32,7 @@ proc onKeydown(game: Game, ev: Event) =
 proc onTouch(game: Game, ev: TouchEvent) =
   let lastDir = game.getLastDirection()
   let (touched, direction) = detectTouch("snake_canvas", ev, lastDir)
-  console.log(touched, direction)
+
   if touched:
     game.changeDirection(direction)
 
@@ -41,10 +41,13 @@ proc onTick(game: Game, time: float) =
 
   game.nextFrame(time)
 
-proc onLoad() {.exportc.} =
-  var game = newGame()
-
+proc onGameStart(game: Game) =
   window.addEventListener("keydown", (ev: Event) => onKeydown(game, ev))
   window.addEventListener("touchstart", (ev: Event) => onTouch(game, ev.TouchEvent))
+
+
+proc onLoad() {.exportc.} =
+  var game = newGame()
+  game.onGameStart = onGameStart
 
   onTick(game, 16)

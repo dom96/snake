@@ -25,6 +25,7 @@ type
     playersCount: int
     socket: WebSocket
     nickname: string
+    onGameStart*: proc (game: Game)
 
   Scene {.pure.} = enum
     MainMenu, Game
@@ -167,6 +168,10 @@ proc switchScene(game: Game, scene: Scene) =
     )
 
   of Scene.Game:
+    # Let snake.nim know that the game started.
+    if not game.onGameStart.isNil:
+      game.onGameStart(game)
+
     # Create text element nodes to show score and other messages.
     let scoreTextPos = (renderWidth - scoreSidebarWidth + 25, 10.0)
     discard game.renderer.createTextElement("score", scoreTextPos, "#000000",
@@ -448,7 +453,7 @@ proc nextFrame*(game: Game, frameTime: float) =
 proc togglePause*(game: Game) =
   if game.scene != Scene.Game: return
   if not game.player.alive: return
-  
+
   game.paused = not game.paused
   game.messageElement.innerHtml = "paused"
 
