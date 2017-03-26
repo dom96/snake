@@ -1,4 +1,4 @@
-import jsconsole, random, strutils, dom, math, colors, deques, htmlgen
+import jsconsole, random, strutils, dom, math, colors, deques, htmlgen, future
 
 from xmltree import nil
 
@@ -135,6 +135,30 @@ proc createFood(game: Game, kind: FoodKind, foodIndex: int) =
   if kind == Special:
     game.food[foodIndex].ticksLeft = 20
 
+proc connect(game: Game) =
+  game.socket = newWebSocket("ws://localhost:25473", "snake")
+
+  game.socket.onOpen =
+    proc (e: Event) =
+      console.log("Connected to server")
+      let msg = createHelloMessage(game.nickname)
+      game.socket.send(toJson(msg))
+
+  game.socket.onMessage =
+    proc (e: MessageEvent) =
+      processMessage(game, $e.data)
+
+  game.socket.onClose =
+    proc (e: CloseEvent) =
+      console.log("Server closed")
+      game.players = @[]
+      game.playerCountElement.innerHtml = "disconnected"
+      for element in game.highScoreElements:
+        element.innerHtml = ""
+      # Let's attempt to reconnect.
+      console.log("Going to reconnect in 10 seconds")
+      discard window.setTimeout(() => connect(game), 10000)
+
 proc switchScene(game: Game, scene: Scene) =
   case scene
   of Scene.MainMenu:
@@ -203,25 +227,7 @@ proc switchScene(game: Game, scene: Scene) =
     game.createFood(Nibble, 0)
 
     # Set up WebSocket connection.
-    game.socket = newWebSocket("ws://localhost:25473", "snake")
-
-    game.socket.onOpen =
-      proc (e: Event) =
-        console.log("Connected to server")
-        let msg = createHelloMessage(game.nickname)
-        game.socket.send(toJson(msg))
-
-    game.socket.onMessage =
-      proc (e: MessageEvent) =
-        processMessage(game, $e.data)
-
-    game.socket.onClose =
-      proc (e: CloseEvent) =
-        console.log("Server closed")
-        game.players = @[]
-        game.playerCountElement.innerHtml = "disconnected"
-        for element in game.highScoreElements:
-          element.innerHtml = ""
+    game.connect()
 
   game.scene = scene
 
@@ -298,6 +304,7 @@ proc eatFood(game: Game, foodIndex: int) =
     game.createFood(Nibble, 0)
   of Special:
     game.score += 5
+    game.food[foodIndex] = nil
 
   game.updateScore()
 
