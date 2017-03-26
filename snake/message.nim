@@ -7,6 +7,7 @@ type
   Player* = object
     nickname*: string
     score*: BiggestInt
+    alive*, paused*: bool
 
   Message* = object
     case kind*: MessageType
@@ -14,6 +15,8 @@ type
       nickname*: string
     of MessageType.ScoreUpdate:
       score*: BiggestInt
+      alive*: bool
+      paused*: bool
     of MessageType.PlayerUpdate:
       players*: seq[Player]
       count*: int
@@ -24,7 +27,9 @@ type
 proc parsePlayer*(player: JsonNode): Player =
   Player(
     nickname: player["nickname"].getStr,
-    score: player["score"].getNum()
+    score: player["score"].getNum(),
+    alive: player["alive"].getBVal(),
+    paused: player["paused"].getBVal()
   )
 
 proc parseMessage*(data: string): Message =
@@ -36,6 +41,8 @@ proc parseMessage*(data: string): Message =
     result.nickname = json["nickname"].getStr()
   of MessageType.ScoreUpdate:
     result.score = json["score"].getNum()
+    result.alive = json["alive"].getBVal()
+    result.paused = json["paused"].getBVal()
   of MessageType.PlayerUpdate:
     result.players = @[]
     for player in json["players"]:
@@ -46,7 +53,9 @@ proc parseMessage*(data: string): Message =
 proc `%`(player: Player): JsonNode =
   %{
         "nickname": %player.nickname,
-        "score": %player.score
+        "score": %player.score,
+        "alive": %player.alive,
+        "paused": %player.paused
    }
 
 proc toJson*(message: Message): string =
@@ -58,6 +67,8 @@ proc toJson*(message: Message): string =
     json["nickname"] = %message.nickname
   of MessageType.ScoreUpdate:
     json["score"] = %message.score
+    json["alive"] = %message.alive
+    json["paused"] = %message.paused
   of MessageType.PlayerUpdate:
     var players: seq[JsonNode] = @[]
     for player in message.players:
@@ -71,8 +82,9 @@ proc toJson*(message: Message): string =
 proc createHelloMessage*(nickname: string): Message =
   Message(kind: MessageType.Hello, nickname: nickname)
 
-proc createScoreUpdateMessage*(score: int): Message =
-  Message(kind: MessageType.ScoreUpdate, score: score)
+proc createScoreUpdateMessage*(score: int, alive, paused: bool): Message =
+  Message(kind: MessageType.ScoreUpdate, score: score, alive: alive,
+          paused: paused)
 
 proc createPlayerUpdateMessage*(players: seq[Player], top: Player): Message =
   # Sort by high score.

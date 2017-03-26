@@ -59,6 +59,7 @@ proc updateClients(server: Server) {.async.} =
 proc updateTopScore(server: Server, player: Player) =
   if server.top.score < player.score:
     server.top = player
+    server.top.alive = true
 
     # Save to topscore.snake.
     let filename = getTopScoresFilename()
@@ -74,6 +75,8 @@ proc processMessage(server: Server, client: Client, data: string) {.async.} =
   case msg.kind
   of MessageType.Hello:
     client.player.nickname = msg.nickname
+    client.player.alive = true
+    client.player.paused = false
     # Verify nickname is valid.
     # TODO: Check for swear words? :)
     if client.player.nickname.len < 2:
@@ -84,11 +87,14 @@ proc processMessage(server: Server, client: Client, data: string) {.async.} =
       client.player.nickname = client.player.nickname[0 .. 8]
   of MessageType.ScoreUpdate:
     client.player.score = msg.score
+    client.player.alive = msg.alive
+    client.player.paused = msg.paused
     # Validate score.
     if client.player.score.int notin 0 .. 9999:
       warn("Bad score for ", $client)
       client.player.score = 0
       client.connected = false
+      return
 
     # Update top score
     updateTopScore(server, client.player)
@@ -138,13 +144,15 @@ proc loadTopScore(server: Server) =
     let split = latest.split("\t")
     server.top = Player(
       nickname: split[0],
-      score: split[1].parseInt()
+      score: split[1].parseInt(),
+      alive: true
     )
   else:
     info("No topscores.snake file found")
     server.top = Player(
       nickname: "",
-      score: 0
+      score: 0,
+      alive: true
     )
 
 when isMainModule:

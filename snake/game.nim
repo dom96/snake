@@ -61,6 +61,7 @@ const
 
 const
   levelBgColor = "#b2bd08"
+  crossOutColor = "#cc1f1f"
   font = "Snake"
   blinkTime = 800 # ms
 
@@ -108,7 +109,12 @@ proc generateFoodPos(game: Game): Point[float] =
 
 proc createHighScoreText(player: Player): string =
   let nickname = xmltree.escape(player.nickname.toLowerAscii())
-  let text = span(nickname, style="float: left;") &
+  let deathStyle =
+    if player.alive: ""
+    else: ("background-image: linear-gradient(transparent 5px,$1 5px,$1 7px,transparent 5px);" &
+          "background-image: -webkit-linear-gradient(transparent 5px,$1 5px,$1 7px,transparent 5px);") %
+          crossOutColor
+  let text = span(nickname, style="float: left;" & deathStyle) &
              span(intToStr(player.score.int), style="float: right;")
   return text
 
@@ -129,6 +135,9 @@ proc processMessage(game: Game, data: string) =
       if i < len(game.players):
         let player = game.players[i]
         game.highScoreElements[i].innerHTML = createHighScoreText(player)
+        game.highScoreElements[i].style.color =
+          if player.paused: "#6d6d6d"
+          else: "#2d2d2d"
       else:
         game.highScoreElements[i].innerHTML = ""
 
@@ -309,14 +318,17 @@ proc detectFoodCollision(game: Game): int =
 
   return -1
 
+proc updateServer(game: Game) =
+  let msg = createScoreUpdateMessage(game.score, game.player.alive, game.paused)
+  if game.socket.readyState == ReadyState.Open:
+    game.socket.send(toJson(msg))
+
 proc updateScore(game: Game) =
   # Update score element.
   game.scoreElement.innerHTML = intToStr(game.score, 7)
 
   # Update server.
-  let msg = createScoreUpdateMessage(game.score)
-  if game.socket.readyState == ReadyState.Open:
-    game.socket.send(toJson(msg))
+  updateServer(game)
 
 proc eatFood(game: Game, foodIndex: int) =
   let tailPos = game.player.body[^1].pos.copy()
@@ -359,8 +371,11 @@ proc update(game: Game) =
   # Check for collision with itself.
   let headCollision = game.detectHeadCollision()
   if headCollision:
+    let wasAlive = game.player.alive
     game.player.alive = false
     game.messageElement.innerHtml = "game<br/>over"
+    if wasAlive:
+      updateServer(game)
     return
 
   # Check for food collision.
@@ -536,6 +551,8 @@ proc togglePause*(game: Game) =
 
   game.paused = not game.paused
   game.messageElement.innerHtml = "paused"
+
+  updateServer(game)
 
 proc restart*(game: Game) =
   game.player = newSnake()
