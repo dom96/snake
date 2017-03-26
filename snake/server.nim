@@ -11,6 +11,8 @@ type
     connected: bool
     hostname: string
     player: Player
+    lastMessage: float
+    rapidMessageCount: int
 
   Server = ref object
     clients: seq[Client]
@@ -75,6 +77,19 @@ proc updateTopScore(server: Server, player: Player) =
 
 proc processMessage(server: Server, client: Client, data: string) {.async.} =
   ## Process a single message.
+
+  # Check if last message was relatively recent. If so, kick the user.
+  if epochTime() - client.lastMessage < 0.5: # 500ms
+    client.rapidMessageCount.inc
+  else:
+    client.rapidMessageCount = 0
+
+  client.lastMessage = epochTime()
+  if client.rapidMessageCount > 4:
+    warn("Client ($1) is firing messages too rapidly. Killing." % $client)
+    client.connected = false
+
+  # Parse message.
   let msg = parseMessage(data)
   case msg.kind
   of MessageType.Hello:
@@ -90,6 +105,12 @@ proc processMessage(server: Server, client: Client, data: string) {.async.} =
       warn("Nickname too long, truncating")
       client.player.nickname = client.player.nickname[0 .. 8]
   of MessageType.ScoreUpdate:
+    let diff = msg.score - client.player.score
+    if diff < 0 or diff > 5 or not client.player.alive:
+      warn("Client ($1) is cheating: " % $client)
+      client.connected = false
+      return
+
     client.player.score = msg.score
     client.player.alive = msg.alive
     client.player.paused = msg.paused
