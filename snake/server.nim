@@ -34,19 +34,21 @@ proc getTopScoresFilename(): string = getCurrentDir() / "topscores.snake"
 proc updateClients(server: Server) {.async.} =
   ## Updates each client with the current player scores every second.
   while true:
+    var newClients: seq[Client] = @[]
+    var players: seq[Player] = @[]
+    for client in server.clients:
+      if not client.connected: continue
+
+      players.add(client.player)
+      newClients.add(client)
+
+    # Overwrite with new list containing only connected clients.
+    server.needsUpdate = server.needsUpdate or
+        server.clients.len != newClients.len
+    server.clients = newClients
+
     if server.needsUpdate:
-      info("Updating")
-      var newClients: seq[Client] = @[]
-      var players: seq[Player] = @[]
-      for client in server.clients:
-        if not client.connected: continue
-
-        players.add(client.player)
-        newClients.add(client)
-
-      # Overwrite with new list containing only connected clients.
-      server.clients = newClients
-
+      info("Updating clients")
       # Send the message to each client.
       let msg = createPlayerUpdateMessage(players, server.top)
       for client in server.clients:
