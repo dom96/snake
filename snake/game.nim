@@ -195,6 +195,9 @@ proc switchScene(game: Game, scene: Scene) =
       proc (e: CloseEvent) =
         console.log("Server closed")
         game.players = @[]
+        game.playerCountElement.innerHtml = "disconnected"
+        for element in game.highScoreElements:
+          element.innerHtml = ""
 
   game.scene = scene
 
