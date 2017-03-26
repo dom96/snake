@@ -84,10 +84,21 @@ proc head(snake: Snake): SnakeSegment =
   snake.body[0]
 
 proc generateFoodPos(game: Game): Point[float] =
-  result = (
-    random(0 .. levelWidth.int).float,
-    random(0 .. levelHeight.int).float
-  )
+  # TODO: Reimplement this naive implementation.
+  var i = 0
+  while i < 5:
+    result = (
+      random(0 .. levelWidth.int).float,
+      random(0 .. levelHeight.int).float
+    )
+
+    var hit = false
+    for segment in game.player.body:
+      if segment.pos == result:
+        hit = true
+        break
+    if not hit: break
+    i.inc()
 
 proc processMessage(game: Game, data: string) =
   let msg = parseMessage(data)
