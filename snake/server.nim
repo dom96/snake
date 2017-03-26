@@ -121,7 +121,7 @@ when isMainModule:
   )
 
   # Launch the HTTP server.
-  const port = Port(8080)
+  const port = Port(25473)
   info("Listening on port ", port.int)
 
   # TODO: Slightly annoying that I cannot just use future.=> here instead.
