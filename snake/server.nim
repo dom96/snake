@@ -106,8 +106,8 @@ proc processMessage(server: Server, client: Client, data: string) {.async.} =
       client.player.nickname = client.player.nickname[0 .. 8]
   of MessageType.ScoreUpdate:
     let diff = msg.score - client.player.score
-    if diff < 0 or diff > 5 or not client.player.alive:
-      warn("Client ($1) is cheating: " % $client)
+    if diff < 0 or msg.score > server.top.score or not client.player.alive:
+      warn("Client ($1) is cheating" % $client)
       client.connected = false
       return
 
