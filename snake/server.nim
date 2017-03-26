@@ -9,6 +9,7 @@ type
   Client = ref object
     socket: AsyncSocket
     connected: bool
+    hostname: string
     player: Player
 
   Server = ref object
@@ -16,16 +17,17 @@ type
     needsUpdate: bool
     top: Player ## Highest score ever.
 
-proc newClient(socket: AsyncSocket): Client =
+proc newClient(socket: AsyncSocket, hostname: string): Client =
   return Client(
     socket: socket,
     connected: true,
+    hostname: hostname,
     player: initPlayer()
   )
 
 proc `$`(client: Client): string =
-  return "Client(nickname: $1, score: $2)" %
-      [client.player.nickname, $client.player.score]
+  return "Client(ip: $1, nickname: $2, score: $3)" %
+      [client.hostname, client.player.nickname, $client.player.score]
 
 proc getTopScoresFilename(): string = getCurrentDir() / "topscores.snake"
 
@@ -120,15 +122,19 @@ proc processClient(server: Server, client: Client) {.async.} =
     let frame = frameFut.read()
     info("Received ", frame.opcode)
     if frame.opcode == Opcode.Text:
-      await processMessage(server, client, frame.data)
+      let processFut = processMessage(server, client, frame.data)
+      if processFut.failed:
+        error("Client ($1) attempted to send bad JSON? " % $client,
+              processFut.error.msg)
+        client.connected = false
 
   client.socket.close()
 
 proc onRequest(server: Server, req: Request) {.async.} =
   let (success, error) = await verifyWebsocketRequest(req, "snake")
   if success:
-    info("Client connected")
-    server.clients.add(newClient(req.client))
+    info("Client connected from ", req.hostname)
+    server.clients.add(newClient(req.client, req.hostname))
     asyncCheck processClient(server, server.clients[^1])
   else:
     error("WS negotiation failed: " & error)
