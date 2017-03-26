@@ -66,6 +66,7 @@ proc updateTopScore(server: Server, player: Player) =
     let time = getGMTime(getTime()).format("yyyy-MM-dd HH:mm:ss")
     file.write("$1\t$2\t$3\n" %
         [server.top.nickname, $server.top.score, time])
+    file.close()
 
 proc processMessage(server: Server, client: Client, data: string) {.async.} =
   ## Process a single message.
