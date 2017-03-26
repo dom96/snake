@@ -194,7 +194,7 @@ proc switchScene(game: Game, scene: Scene) =
     game.createFood(Apple, 0)
 
     # Set up WebSocket connection.
-    game.socket = newWebSocket("ws://localhost:8080", "snake")
+    game.socket = newWebSocket("ws://localhost:25473", "snake")
 
     game.socket.onOpen =
       proc (e: Event) =
@@ -266,7 +266,8 @@ proc updateScore(game: Game) =
 
   # Update server.
   let msg = createScoreUpdateMessage(game.score)
-  game.socket.send(toJson(msg))
+  if game.socket.readyState == ReadyState.Open:
+    game.socket.send(toJson(msg))
 
 proc eatFood(game: Game, foodIndex: int) =
   let tailPos = game.player.body[^1].pos.copy()
