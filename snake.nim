@@ -2,7 +2,7 @@ import dom, jsconsole, future
 
 import gamelight/geometry
 
-import snake/[game, keyboard]
+import snake/[game, keyboard, touch]
 
 proc onKeydown(game: Game, ev: Event) =
   console.log(ev.keyCode)
@@ -29,6 +29,13 @@ proc onKeydown(game: Game, ev: Event) =
   if handled:
     ev.preventDefault()
 
+proc onTouch(game: Game, ev: TouchEvent) =
+  let lastDir = game.getLastDirection()
+  let (touched, direction) = detectTouch("snake_canvas", ev, lastDir)
+  console.log(touched, direction)
+  if touched:
+    game.changeDirection(direction)
+
 proc onTick(game: Game, time: float) =
   let reqId = window.requestAnimationFrame((time: float) => onTick(game, time))
 
@@ -38,5 +45,6 @@ proc onLoad() {.exportc.} =
   var game = newGame()
 
   window.addEventListener("keydown", (ev: Event) => onKeydown(game, ev))
+  window.addEventListener("touchstart", (ev: Event) => onTouch(game, ev.TouchEvent))
 
   onTick(game, 16)

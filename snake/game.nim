@@ -219,7 +219,7 @@ proc switchScene(game: Game, scene: Scene) =
 proc newGame*(): Game =
   randomize()
   result = Game(
-    renderer: newRenderer2D("canvas", renderWidth.int, renderHeight.int),
+    renderer: newRenderer2D("snake_canvas", renderWidth.int, renderHeight.int),
     player: newSnake(),
     players: @[],
     scene: Scene.MainMenu
@@ -228,10 +228,20 @@ proc newGame*(): Game =
   switchScene(result, Scene.MainMenu)
 
 proc changeDirection*(game: Game, direction: Direction) =
+  if game.scene != Scene.Game: return
+
   if game.player.requestedDirections.len >= 2:
     return
 
   game.player.requestedDirections.addLast(direction)
+
+proc getLastDirection*(game: Game): Direction =
+  ## Retrieves the direction that the snake is moving in currently,
+  ## or if directions have been requested but not executed yet then it
+  ## returns the last of those directions.
+  result = game.player.direction
+  if game.player.requestedDirections.len > 0:
+    result = game.player.requestedDirections[^1]
 
 proc processDirections(game: Game) =
   while game.player.requestedDirections.len > 0:
