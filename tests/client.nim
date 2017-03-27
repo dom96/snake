@@ -32,6 +32,6 @@ proc createConnection(ip: string, i: int) {.async.} =
 when isMainModule:
   let ip = paramStr(1)
   randomize()
-  for i in 0 .. :
+  for i in 0 .. 100:
     asyncCheck createConnection(ip, i)
   runForever()
