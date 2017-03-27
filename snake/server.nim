@@ -63,7 +63,7 @@ proc updateClients(server: Server) {.async.} =
     # Wait for 1 second.
     await sleepAsync(1000)
 
-proc updateTopScore(server: Server, player: Player) =
+proc updateTopScore(server: Server, player: Player, hostname: string) =
   if server.top.score < player.score:
     server.top = player
     server.top.alive = true
@@ -72,8 +72,8 @@ proc updateTopScore(server: Server, player: Player) =
     let filename = getTopScoresFilename()
     let file = open(filename, fmAppend)
     let time = getGMTime(getTime()).format("yyyy-MM-dd HH:mm:ss")
-    file.write("$1\t$2\t$3\n" %
-        [server.top.nickname, $server.top.score, time])
+    file.write("$1\t$2\t$3\t$4\n" %
+        [server.top.nickname, $server.top.score, time, hostname])
     file.close()
 
 proc processMessage(server: Server, client: Client, data: string) {.async.} =
@@ -123,7 +123,7 @@ proc processMessage(server: Server, client: Client, data: string) {.async.} =
       return
 
     # Update top score
-    updateTopScore(server, client.player)
+    updateTopScore(server, client.player, client.hostname)
 
   of MessageType.PlayerUpdate:
     # The client shouldn't send this.
