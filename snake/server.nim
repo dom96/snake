@@ -16,7 +16,6 @@ type
 
   Server = ref object
     clients: seq[Client]
-    newClients: seq[Client] ## Clients that have just connected.
     needsUpdate: bool
     top: Player ## Highest score ever.
 
@@ -37,25 +36,27 @@ proc getTopScoresFilename(): string = getCurrentDir() / "topscores.snake"
 proc updateClients(server: Server) {.async.} =
   ## Updates each client with the current player scores every second.
   while true:
+    var newClients: seq[Client] = @[]
     var players: seq[Player] = @[]
     for client in server.clients:
       if not client.connected: continue
 
       players.add(client.player)
-      server.newClients.add(client)
+      newClients.add(client)
 
     # Overwrite with new list containing only connected clients.
     server.needsUpdate = server.needsUpdate or
-        server.clients.len != server.newClients.len
-    server.clients = server.newClients
-    server.newClients = @[]
+        server.clients.len != newClients.len
+    server.clients = newClients
 
     if server.needsUpdate:
       info("Updating clients")
       # Send the message to each client.
       let msg = createPlayerUpdateMessage(players, server.top)
-      for client in server.clients:
-        await client.socket.sendText(toJson(msg), false)
+      # Iterate over indexes in case a new client connects in-between our calls
+      # to `sendText`.
+      for i in 0 .. <server.clients.len:
+        await server.clients[i].socket.sendText(toJson(msg), false)
 
       server.needsUpdate = false
 
@@ -157,9 +158,7 @@ proc onRequest(server: Server, req: Request) {.async.} =
   let (success, error) = await verifyWebsocketRequest(req, "snake")
   if success:
     info("Client connected from ", req.hostname)
-    # Don't add directly to server.clients because processClients could be
-    # iterating over it.
-    server.newClients.add(newClient(req.client, req.hostname))
+    server.clients.add(newClient(req.client, req.hostname))
     asyncCheck processClient(server, server.clients[^1])
   else:
     error("WS negotiation failed: " & error)
@@ -194,8 +193,7 @@ when isMainModule:
   # Set up a new `server` instance.
   let httpServer = newAsyncHttpServer()
   let server = Server(
-    clients: @[],
-    newClients: @[]
+    clients: @[]
   )
 
   # Load top score.
