@@ -1,0 +1,38 @@
+Traceback (most recent call last)
+server.nim(209)          server
+asyncdispatch.nim(1081)  waitFor
+asyncdispatch.nim(1072)  poll
+asyncdispatch.nim(1242)  cb
+asyncfutures.nim(118)    complete
+asyncdispatch.nim(1387)  :anonymous
+asyncfutures.nim(118)    complete
+asyncmacro.nim(34)       cb
+asyncmacro.nim(334)      sendIter
+asyncfutures.nim(118)    complete
+asyncmacro.nim(34)       cb
+asyncmacro.nim(334)      sendTextIter
+asyncfutures.nim(118)    complete
+asyncmacro.nim(50)       cb
+asyncfutures.nim(156)    fail
+asyncfutures.nim(322)    :anonymous
+Error: unhandled exception: len(a) == L seq modified while iterating over it
+  updateClients's lead up to read of failed Future:
+    Traceback (most recent call last)
+    server.nim(209)          server
+    asyncdispatch.nim(1081)  waitFor
+    asyncdispatch.nim(1072)  poll
+    asyncdispatch.nim(1242)  cb
+    asyncfutures.nim(118)    complete
+    asyncdispatch.nim(1387)  :anonymous
+    asyncfutures.nim(118)    complete
+    asyncmacro.nim(34)       cb
+    asyncmacro.nim(334)      sendIter
+    asyncfutures.nim(118)    complete
+    asyncmacro.nim(34)       cb
+    asyncmacro.nim(334)      sendTextIter
+    asyncfutures.nim(118)    complete
+    asyncmacro.nim(34)       cb
+    system.nim(3557)         updateClientsIter
+    system.nim(3526)         failedAssertImpl
+    system.nim(3518)         raiseAssert
+    system.nim(2628)         sysFatal [Exception]
