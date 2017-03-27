@@ -558,4 +558,6 @@ proc restart*(game: Game) =
   game.player = newSnake()
   game.score = 0
 
+  let msg = createHelloMessage(game.nickname)
+  game.socket.send(toJson(msg))
   updateScore(game)
