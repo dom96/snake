@@ -187,11 +187,11 @@ proc switchScene(game: Game, scene: Scene) =
     var elements: seq[Element] = @[]
     let snakeTextPos = (renderWidth / 2 - 90, renderHeight / 2 - 70)
     elements.add game.renderer.createTextElement("snake", snakeTextPos,
-        "#000000", "90px " & font)
+        "#000000", 90.0, font)
 
     let nameTextPos = (snakeTextPos[0], snakeTextPos[1] + 100)
     elements.add game.renderer.createTextElement("nick: ", nameTextPos,
-        "#000000", "24px " & font)
+        "#000000", 24.0, font)
 
     let nameInputPos = (nameTextPos[0] + 50, nameTextPos[1])
     elements.add game.renderer.createTextBox(nameInputPos)
@@ -221,31 +221,31 @@ proc switchScene(game: Game, scene: Scene) =
     # Create text element nodes to show player score.
     let scoreTextPos = (renderWidth - scoreSidebarWidth + 25, 10.0)
     discard game.renderer.createTextElement("score", scoreTextPos, "#000000",
-                                              "24px " & font)
+                                            24, font)
     let scorePos = (renderWidth - scoreSidebarWidth + 25, 35.0)
     game.scoreElement = game.renderer.createTextElement("0000000", scorePos,
-                          "#000000", "14px " & font)
+                          "#000000", 14, font)
 
     # Create all time high score elements.
     let allTimePos = (renderWidth - scoreSidebarWidth + 17, allTimeScoreTop)
     game.allTimeTextElement = game.renderer.createTextElement(
-        "all time high score", allTimePos, levelBgColor, "10px " & font)
+        "all time high score", allTimePos, levelBgColor, 10, font)
     let allTimeScorePos = (renderWidth - scoreSidebarWidth + 15,
                            allTimePos[1] + 10.0)
     game.allTimeScoreElement = game.renderer.createTextElement("",
-        allTimeScorePos, levelBgColor, "12px " & font)
+        allTimeScorePos, levelBgColor, 12, font)
     game.allTimeScoreElement.style.width = $scoreTextWidth & "px"
 
     # Create element to show game over/paused message.
     let messageTextPos = (renderWidth - scoreSidebarWidth + 23, 85.0)
     game.messageElement = game.renderer.createTextElement("game<br/>over",
-                            messageTextPos, "#000000", "26px " & font)
+                            messageTextPos, "#000000", 26, font)
 
     # Create element to show current player count.
     let playerCountPos = (renderWidth - scoreSideBarWidth + 15,
                           renderHeight - 25.0)
     game.playerCountElement = game.renderer.createTextElement("",
-                                playerCountPos, "#1d1d1d", "12px " & font)
+                                playerCountPos, "#1d1d1d", 12, font)
 
     # Create a high score elements.
     for i in 0 .. game.highScoreElements.high:
@@ -253,7 +253,7 @@ proc switchScene(game: Game, scene: Scene) =
       let pos = (renderWidth - scoreSideBarWidth + 15,
                 scorePos[1] + y)
       game.highScoreElements[i] = game.renderer.createTextElement("",
-          pos, "#2d2d2d", "12px " & font)
+          pos, "#2d2d2d", 12, font)
       game.highScoreElements[i].style.width = $scoreTextWidth & "px"
 
     # Create first nibble.
