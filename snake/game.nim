@@ -193,16 +193,19 @@ proc switchScene(game: Game, scene: Scene) =
     elements.add game.renderer.createTextElement("nick: ", nameTextPos,
         "#000000", 24.0, font)
 
-    let nameInputPos = (nameTextPos[0] + 50, nameTextPos[1])
-    elements.add game.renderer.createTextBox(nameInputPos)
-    elements[^1].style.width = "80px"
+    let nameInputPos = (nameTextPos[0] + 50, nameTextPos[1] + 3)
+    elements.add game.renderer.createTextBox(nameInputPos, width = 80, height = 16)
     elements[^1].style.backgroundColor = "transparent"
     elements[^1].style.border = "none"
     elements[^1].style.borderBottom = "2px solid black"
-    elements[^1].style.height = "16px"
 
-    let playBtnPos = (nameInputPos[0] + 90, nameInputPos[1] + 5)
-    elements.add game.renderer.createButton(playBtnPos, "Play")
+    let playBtnPos = (nameInputPos[0] + 90, nameInputPos[1])
+    elements.add game.renderer.createButton(playBtnPos, "play", width = 60,
+                                            height = 20, fontSize = 18,
+                                            fontFamily = font)
+    elements[^1].style.backgroundColor = "black"
+    elements[^1].style.color = levelBgColor
+    elements[^1].style.border = "0"
 
     elements[^1].addEventListener("click",
       proc (ev: Event) =
@@ -233,8 +236,7 @@ proc switchScene(game: Game, scene: Scene) =
     let allTimeScorePos = (renderWidth - scoreSidebarWidth + 15,
                            allTimePos[1] + 10.0)
     game.allTimeScoreElement = game.renderer.createTextElement("",
-        allTimeScorePos, levelBgColor, 12, font)
-    game.allTimeScoreElement.style.width = $scoreTextWidth & "px"
+        allTimeScorePos, levelBgColor, 12, font, scoreTextWidth)
 
     # Create element to show game over/paused message.
     let messageTextPos = (renderWidth - scoreSidebarWidth + 23, 85.0)
@@ -253,8 +255,7 @@ proc switchScene(game: Game, scene: Scene) =
       let pos = (renderWidth - scoreSideBarWidth + 15,
                 scorePos[1] + y)
       game.highScoreElements[i] = game.renderer.createTextElement("",
-          pos, "#2d2d2d", 12, font)
-      game.highScoreElements[i].style.width = $scoreTextWidth & "px"
+          pos, "#2d2d2d", 12, font, scoreTextWidth)
 
     # Create first nibble.
     game.createFood(Nibble, 0)
