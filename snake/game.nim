@@ -534,8 +534,8 @@ proc nextFrame*(game: Game, frameTime: float) =
   let lag = (elapsedTime / game.getTickLength) - ticks.float
   if elapsedTime > game.getTickLength:
     game.lastUpdate = frameTime
-    for tick in 0 .. <ticks:
-      game.update()
+    #for tick in 0 .. <ticks:
+    game.update()
 
   # Blink timer.
   let elapsedBlinkTime = frameTime - game.lastBlink
