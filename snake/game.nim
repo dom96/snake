@@ -513,8 +513,10 @@ proc drawGame(game: Game) =
   # Show/hide Game Over or Pause message.
   if game.blink and showMessage:
     game.messageElement.style.display = "block"
+    game.scoreElement.style.color = crossOutColor
   else:
     game.messageElement.style.display = "none"
+    game.scoreElement.style.color = "black"
 
 proc draw(game: Game, lag: float) =
   # Fill background color.
