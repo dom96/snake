@@ -36,6 +36,10 @@ proc onTouch(game: Game, ev: TouchEvent) =
   if touched:
     game.changeDirection(direction)
 
+  if game.isScaledToScreen():
+    ev.preventDefault()
+    ev.target.Element.click()
+
 proc onTick(game: Game, time: float) =
   let reqId = window.requestAnimationFrame((time: float) => onTick(game, time))
 
@@ -43,7 +47,8 @@ proc onTick(game: Game, time: float) =
 
 proc onGameStart(game: Game) =
   window.addEventListener("keydown", (ev: Event) => onKeydown(game, ev))
-  window.addEventListener("touchstart", (ev: Event) => onTouch(game, ev.TouchEvent))
+  window.addEventListener("touchstart", (ev: Event) => onTouch(game, ev.TouchEvent),
+                          AddEventListenerOptions(passive: false))
 
 proc onLoad() {.exportc.} =
   var game = newGame()

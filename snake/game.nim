@@ -2,7 +2,7 @@ import jsconsole, random, strutils, dom, math, colors, deques, htmlgen, future
 
 from xmltree import nil
 
-import gamelight/[graphics, geometry, vec]
+import gamelight/[graphics, geometry, vec, utils]
 import jswebsockets
 
 import message
@@ -220,6 +220,10 @@ proc switchScene(game: Game, scene: Scene) =
     # Let snake.nim know that the game started.
     if not game.onGameStart.isNil:
       game.onGameStart(game)
+
+    # Scale to screen size.
+    if isTouchDevice():
+      game.renderer.setScaleToScreen(true)
 
     # Create text element nodes to show player score.
     let scoreTextPos = (renderWidth - scoreSidebarWidth + 25, 10.0)
@@ -562,3 +566,6 @@ proc restart*(game: Game) =
   let msg = createHelloMessage(game.nickname)
   game.socket.send(toJson(msg))
   updateScore(game)
+
+proc isScaledToScreen*(game: Game): bool =
+  return game.renderer.getScaleToScreen()
