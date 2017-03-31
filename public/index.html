@@ -1,45 +1,69 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8"/>
-    <title>Nim snake!</title>
-    <script type="text/javascript" src="snake.js"></script>
-    <style type="text/css">
-      @font-face {
-        font-family: 'Snake';
-        src: url("font.woff") format("woff"),
-             url("font.ttf") format("truetype");
-        font-weight: normal;
-        font-style: normal;
-      }
 
-      body {
-        margin: 0;
-        overflow: hidden;
-        font-family: Snake, monospace;
-      }
+<head>
+  <meta charset="utf-8" />
+  <title>Multiplayer Snake</title>
+  <script type="text/javascript" src="snake.js"></script>
+  <style type="text/css">
+    @font-face {
+      font-family: 'Snake';
+      src: url("font.woff") format("woff"), url("font.ttf") format("truetype");
+      font-weight: normal;
+      font-style: normal;
+    }
+    
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Snake, monospace;
+    }
+    
+    #snake {
+      background-color: black;
+    }
 
-      #snake {
-        border: 1px solid black;
-        background-color: black;
-      }
+    #snake > canvas {
+      border: 1px solid black;
+      display: block;
+    }
+    
+    #center {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-flow: column;
+      height: 300px;
+    }
 
-      #center {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 300px;
-      }
-    </style>
-    <meta name="viewport" content="width=device-width" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  </head>
-  <body onload="onLoad();">
-    <div id="center">
-      <div id="snake">
-        <canvas id="snake_canvas"></canvas>
+    #controls {
+      display: flex;
+      background-color: white;
+      padding: 2px 6px;
+      border-top: 1px solid black;
+      border-bottom: 2px solid black;
+    }
+
+    #controls > span {
+      flex: 1;
+    }
+  </style>
+  <meta name="viewport" content="width=device-width" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+</head>
+
+<body onload="onLoad();">
+  <div id="center">
+    <div id="snake">
+      <canvas id="snake_canvas"></canvas>
+      <div id="controls">
+        <span><b>New Game:</b> N</span>
+        <span><b>Play/Pause: </b> P</span>
+        <span><b>Controls: </b> ← → ↑ ↓</span>
       </div>
     </div>
-  </body>
+  </div>
+</body>
+
 </html>
