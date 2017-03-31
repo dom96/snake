@@ -1,8 +1,11 @@
 import dom, jsconsole, future
 
-import gamelight/geometry
+import gamelight/[geometry, utils]
 
 import snake/[game, keyboard, touch]
+
+const
+  canvasId = "snake_canvas"
 
 proc onKeydown(game: Game, ev: Event) =
   console.log(ev.keyCode)
@@ -31,7 +34,7 @@ proc onKeydown(game: Game, ev: Event) =
 
 proc onTouch(game: Game, ev: TouchEvent) =
   let lastDir = game.getLastDirection()
-  let (touched, direction) = detectTouch("snake_canvas", ev, lastDir)
+  let (touched, direction) = detectTouch(canvasId, ev, lastDir)
 
   if touched:
     game.changeDirection(direction)
@@ -51,7 +54,11 @@ proc onGameStart(game: Game) =
                           AddEventListenerOptions(passive: false))
 
 proc onLoad() {.exportc.} =
-  var game = newGame()
+  var game = newGame(canvasId)
   game.onGameStart = onGameStart
+
+  if isTouchDevice():
+    # Hide keyboard control cheatsheet.
+    document.querySelector("#controls").style.display = "none"
 
   onTick(game, 16)

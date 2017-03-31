@@ -269,10 +269,10 @@ proc switchScene(game: Game, scene: Scene) =
 
   game.scene = scene
 
-proc newGame*(): Game =
+proc newGame*(canvasId: string): Game =
   randomize()
   result = Game(
-    renderer: newRenderer2D("snake_canvas", renderWidth.int, renderHeight.int),
+    renderer: newRenderer2D(canvasId, renderWidth.int, renderHeight.int),
     player: newSnake(),
     players: @[],
     scene: Scene.MainMenu
