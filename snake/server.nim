@@ -187,7 +187,7 @@ proc loadTopScore(server: Server) =
 
 when isMainModule:
   # Set up logging to console.
-  var consoleLogger = newConsoleLogger()
+  var consoleLogger = newConsoleLogger(fmtStr = "$levelname $datetime ")
   addHandler(consoleLogger)
 
   # Set up a new `server` instance.
