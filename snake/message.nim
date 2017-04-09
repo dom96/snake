@@ -1,5 +1,10 @@
 import json, algorithm, future
 
+# TODO: It's annoying that we need to import these for FoodKind and Point...
+import gamelight/[vec, geometry], food
+
+import replay
+
 type
   MessageType* {.pure.} = enum
     Hello, ScoreUpdate, PlayerUpdate
@@ -17,6 +22,7 @@ type
       score*: BiggestInt
       alive*: bool
       paused*: bool
+      replay*: Replay
     of MessageType.PlayerUpdate:
       players*: seq[Player]
       count*: int
@@ -43,6 +49,8 @@ proc parseMessage*(data: string): Message =
     result.score = json["score"].getNum()
     result.alive = json["alive"].getBVal()
     result.paused = json["paused"].getBVal()
+    if json["replay"].kind == JString:
+      result.replay = to(json["replay"], Replay)
   of MessageType.PlayerUpdate:
     result.players = @[]
     for player in json["players"]:
@@ -69,6 +77,7 @@ proc toJson*(message: Message): string =
     json["score"] = %message.score
     json["alive"] = %message.alive
     json["paused"] = %message.paused
+    json["replay"] = %message.replay
   of MessageType.PlayerUpdate:
     var players: seq[JsonNode] = @[]
     for player in message.players:
@@ -82,9 +91,10 @@ proc toJson*(message: Message): string =
 proc createHelloMessage*(nickname: string): Message =
   Message(kind: MessageType.Hello, nickname: nickname)
 
-proc createScoreUpdateMessage*(score: int, alive, paused: bool): Message =
+proc createScoreUpdateMessage*(score: int, alive, paused: bool,
+                               replay: Replay): Message =
   Message(kind: MessageType.ScoreUpdate, score: score, alive: alive,
-          paused: paused)
+          paused: paused, replay: replay)
 
 proc createPlayerUpdateMessage*(players: seq[Player], top: Player): Message =
   # Sort by high score.

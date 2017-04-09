@@ -5,7 +5,7 @@ from xmltree import nil
 import gamelight/[graphics, geometry, vec, utils]
 import jswebsockets
 
-import message
+import message, food, replay
 
 type
   Game* = ref object
@@ -28,6 +28,7 @@ type
     socket: WebSocket
     nickname: string
     onGameStart*: proc (game: Game)
+    replay: Replay
 
   Scene {.pure.} = enum
     MainMenu, Game
@@ -40,14 +41,6 @@ type
 
   SnakeSegment = ref object
     pos: Point[float] ## Position in level. Not in pixels but segment units.
-
-  FoodKind = enum
-    Nibble, Special
-
-  Food = ref object
-    kind: FoodKind
-    pos: Point[float] ## Position in level. Not in pixels but segment units.
-    ticksLeft: int ## Amount of updates until food disappears.
 
 const
   segmentSize = 10 ## In pixels
@@ -152,6 +145,8 @@ proc createFood(game: Game, kind: FoodKind, foodIndex: int) =
   game.food[foodIndex] = Food(kind: kind, pos: pos, ticksLeft: -1)
   if kind == Special:
     game.food[foodIndex].ticksLeft = 20
+
+  game.replay.recordNewFood(pos, kind)
 
 proc connect(game: Game) =
   game.socket = newWebSocket("ws://localhost:25473", "snake")
@@ -275,7 +270,8 @@ proc newGame*(canvasId: string): Game =
     renderer: newRenderer2D(canvasId, renderWidth.int, renderHeight.int),
     player: newSnake(),
     players: @[],
-    scene: Scene.MainMenu
+    scene: Scene.MainMenu,
+    replay: newReplay()
   )
 
   switchScene(result, Scene.MainMenu)
@@ -304,6 +300,7 @@ proc processDirections(game: Game) =
 
     if direction != game.player.direction:
       game.player.direction = direction
+      game.replay.recordNewDirection(game.player.head.pos, direction)
       break
 
 proc detectHeadCollision(game: Game): bool =
@@ -324,7 +321,11 @@ proc detectFoodCollision(game: Game): int =
   return -1
 
 proc updateServer(game: Game) =
-  let msg = createScoreUpdateMessage(game.score, game.player.alive, game.paused)
+  # TODO: Don't send replay unless we are challenging high score.
+  let replay = game.replay
+
+  let msg = createScoreUpdateMessage(game.score, game.player.alive, game.paused,
+                                     replay)
   if game.socket.readyState == ReadyState.Open:
     game.socket.send(toJson(msg))
 
@@ -339,13 +340,16 @@ proc eatFood(game: Game, foodIndex: int) =
   let tailPos = game.player.body[^1].pos.copy()
   game.player.body.add(newSnakeSegment(tailPos))
 
-  case game.food[foodIndex].kind
+  let kind = game.food[foodIndex].kind
+  case kind
   of Nibble:
     game.score += 1
     game.createFood(Nibble, 0)
   of Special:
     game.score += 5
     game.food[foodIndex] = nil
+
+  game.replay.recordFoodEaten(game.player.head.pos, kind)
 
   game.updateScore()
 
@@ -564,6 +568,7 @@ proc togglePause*(game: Game) =
 proc restart*(game: Game) =
   game.player = newSnake()
   game.score = 0
+  game.replay = newReplay()
 
   let msg = createHelloMessage(game.nickname)
   game.socket.send(toJson(msg))

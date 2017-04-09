@@ -50,7 +50,6 @@ proc updateClients(server: Server) {.async.} =
     server.clients = newClients
 
     if server.needsUpdate:
-      info("Updating clients")
       # Send the message to each client.
       let msg = createPlayerUpdateMessage(players, server.top)
       # Iterate over indexes in case a new client connects in-between our calls
@@ -144,12 +143,13 @@ proc processClient(server: Server, client: Client) {.async.} =
       break
 
     let frame = frameFut.read()
-    info("Received ", frame.opcode)
     if frame.opcode == Opcode.Text:
+      info("Received data from " & $client)
       let processFut = processMessage(server, client, frame.data)
       if processFut.failed:
         error("Client ($1) attempted to send bad JSON? " % $client,
               processFut.error.msg)
+        info("The incorrect JSON was: " & frame.data)
         client.connected = false
 
   client.socket.close()
