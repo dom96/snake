@@ -55,7 +55,7 @@ const
 const
   levelBgColor = "#b2bd08"
   crossOutColor = "#cc1f1f"
-  font = "Snake"
+  font = "Snake, monospace"
   blinkTime = 800 # ms
 
 proc newSnakeSegment(pos: Point[float]): SnakeSegment =
