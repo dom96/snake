@@ -53,7 +53,7 @@ proc onGameStart(game: Game) =
   window.addEventListener("touchstart", (ev: Event) => onTouch(game, ev.TouchEvent),
                           AddEventListenerOptions(passive: false))
 
-proc onLoad() {.exportc.} =
+proc onLoad(event: Event) {.exportc.} =
   var game = newGame(canvasId)
   game.onGameStart = onGameStart
 
@@ -62,3 +62,5 @@ proc onLoad() {.exportc.} =
     document.querySelector("#controls").style.display = "none"
 
   onTick(game, 16)
+
+window.onload = onLoad
