@@ -59,7 +59,7 @@ proc onLoad(event: Event) {.exportc.} =
 
   if isTouchDevice():
     # Hide keyboard control cheatsheet.
-    document.querySelector("#controls").style.display = "none"
+    document.querySelector("#snake_controls").style.display = "none"
 
   onTick(game, 16)
 
