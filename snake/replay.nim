@@ -1,4 +1,4 @@
-import times
+import times, json
 
 import gamelight/[vec, geometry]
 
@@ -56,3 +56,13 @@ proc recordNewDirection*(replay: Replay, pos: Point[float],
       playerDirection: direction
     )
   )
+
+proc `$`*(replay: Replay): string =
+  return $(%replay)
+
+proc validate*(replay: Replay): bool =
+  if replay.isNil:
+    return false
+
+  # TODO: More sophisticated automatic verification.
+  return true

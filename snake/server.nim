@@ -3,7 +3,7 @@ import times
 
 import websocket
 
-import message
+import message, replay
 
 type
   Client = ref object
@@ -62,7 +62,8 @@ proc updateClients(server: Server) {.async.} =
     # Wait for 1 second.
     await sleepAsync(1000)
 
-proc updateTopScore(server: Server, player: Player, hostname: string) =
+proc updateTopScore(server: Server, player: Player, hostname: string,
+                    replay: Replay) =
   if server.top.score < player.score:
     server.top = player
     server.top.alive = true
@@ -71,9 +72,28 @@ proc updateTopScore(server: Server, player: Player, hostname: string) =
     let filename = getTopScoresFilename()
     let file = open(filename, fmAppend)
     let time = getGMTime(getTime()).format("yyyy-MM-dd HH:mm:ss")
-    file.write("$1\t$2\t$3\t$4\n" %
-        [server.top.nickname, $server.top.score, time, hostname])
+    file.write("$1\t$2\t$3\t$4\t$5\n" % [
+      server.top.nickname,
+      $server.top.score,
+      time,
+      hostname,
+      $replay
+    ])
     file.close()
+
+proc validateScore(server: Server, client: Client, replay: Replay): bool =
+  result = true
+  if client.player.score.int notin 0 .. 9999:
+    warn("Bad score for ", $client)
+    return false
+
+  # TODO: Send replay updates to server instead of sending full replay at the
+  # end.
+  # https://security.stackexchange.com/a/148447
+
+  # Verify the replay.
+  if client.player.score > server.top.score:
+    return replay.validate
 
 proc processMessage(server: Server, client: Client, data: string) {.async.} =
   ## Process a single message.
@@ -114,15 +134,15 @@ proc processMessage(server: Server, client: Client, data: string) {.async.} =
     client.player.score = msg.score
     client.player.alive = msg.alive
     client.player.paused = msg.paused
+
     # Validate score.
-    if client.player.score.int notin 0 .. 9999:
-      warn("Bad score for ", $client)
+    if validateScore(server, client, msg.replay):
       client.player.score = 0
       client.connected = false
       return
 
     # Update top score
-    updateTopScore(server, client.player, client.hostname)
+    updateTopScore(server, client.player, client.hostname, msg.replay)
 
   of MessageType.PlayerUpdate:
     # The client shouldn't send this.
