@@ -26,36 +26,42 @@ proc newReplay*(): Replay =
     events: @[]
   )
 
-proc recordNewFood*(replay: Replay, pos: Point[float], kind: FoodKind) =
-  replay.events.add(
+proc add*(replay: Replay, event: ReplayEvent) =
+  replay.events.add(event)
+
+proc recordNewFood*(replay: Replay, pos: Point[float],
+                    kind: FoodKind): ReplayEvent =
+  result =
     ReplayEvent(
       time: epochTime(),
       kind: FoodAppeared,
       foodPos: pos,
       foodKind: kind
     )
-  )
+  replay.events.add(result)
 
-proc recordFoodEaten*(replay: Replay, pos: Point[float], kind: FoodKind) =
-  replay.events.add(
+proc recordFoodEaten*(replay: Replay, pos: Point[float],
+                      kind: FoodKind): ReplayEvent =
+  result =
     ReplayEvent(
       time: epochTime(),
       kind: FoodEaten,
       foodPos: pos,
       foodKind: kind
     )
-  )
+
+  replay.events.add(result)
 
 proc recordNewDirection*(replay: Replay, pos: Point[float],
-                         direction: Direction) =
-  replay.events.add(
+                         direction: Direction): ReplayEvent =
+  result =
     ReplayEvent(
       time: epochTime(),
       kind: DirectionChanged,
       playerPos: pos,
       playerDirection: direction
     )
-  )
+  replay.events.add(result)
 
 proc getScore*(replay: Replay): int =
   result = 0

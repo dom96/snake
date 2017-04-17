@@ -144,8 +144,7 @@ proc processMessage(game: Game, data: string) =
     game.allTimeScoreElement.innerHTML = createHighScoreText(msg.top)
 
   of MessageType.Hello, MessageType.ClientUpdate,
-     MessageType.RecordNewFood, MessageType.RecordFoodEaten,
-     MessageType.RecordNewDirection: discard
+     MessageType.ReplayEvent: discard
 
 proc createFood(game: Game, kind: FoodKind, foodIndex: int) =
   let pos = generateFoodPos(game)
@@ -154,14 +153,9 @@ proc createFood(game: Game, kind: FoodKind, foodIndex: int) =
   if kind == Special:
     game.food[foodIndex].ticksLeft = 20
 
-  game.replay.recordNewFood(pos, kind)
-  game.send(toJson(
-    Message(
-      kind: MessageType.RecordNewFood,
-      foodPos: pos,
-      foodKind: kind
-    )
-  ))
+  game.send(toJson(createReplayEventMessage(
+    game.replay.recordNewFood(pos, kind)
+  )))
 
 proc connect(game: Game) =
   game.socket = newWebSocket("ws://localhost:25473", "snake")
@@ -315,14 +309,9 @@ proc processDirections(game: Game) =
 
     if direction != game.player.direction:
       game.player.direction = direction
-      game.replay.recordNewDirection(game.player.head.pos, direction)
-      game.send(toJson(
-        Message(
-          kind: MessageType.RecordNewDirection,
-          dirPos: game.player.head.pos,
-          dir: direction
-        )
-      ))
+      game.send(toJson(createReplayEventMessage(
+        game.replay.recordNewDirection(game.player.head.pos, direction)
+      )))
       break
 
 proc detectHeadCollision(game: Game): bool =
@@ -366,14 +355,9 @@ proc eatFood(game: Game, foodIndex: int) =
   of Special:
     game.food[foodIndex] = nil
 
-  game.replay.recordFoodEaten(game.player.head.pos, kind)
-  game.send(toJson(
-    Message(
-      kind: MessageType.RecordFoodEaten,
-      foodPos: game.player.head.pos,
-      foodKind: kind
-    )
-  ))
+  game.send(toJson(createReplayEventMessage(
+    game.replay.recordFoodEaten(game.player.head.pos, kind)
+  )))
 
   game.updateScore()
 

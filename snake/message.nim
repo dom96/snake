@@ -7,8 +7,7 @@ import replay
 
 type
   MessageType* {.pure.} = enum
-    Hello, ClientUpdate, PlayerUpdate,
-    RecordNewFood, RecordFoodEaten, RecordNewDirection
+    Hello, ClientUpdate, PlayerUpdate, ReplayEvent
 
   Player* = object
     nickname*: string
@@ -24,12 +23,8 @@ type
     of MessageType.ClientUpdate:
       alive*: bool
       paused*: bool
-    of MessageType.RecordNewFood, MessageType.RecordFoodEaten:
-      foodPos*: Point[float]
-      foodKind*: FoodKind
-    of MessageType.RecordNewDirection:
-      dirPos*: Point[float]
-      dir*: Direction
+    of MessageType.ReplayEvent:
+      replayEvent*: ReplayEvent
     # Server messages
     of MessageType.PlayerUpdate:
       players*: seq[Player]
@@ -52,6 +47,12 @@ proc createHelloMessage*(nickname: string, replay: Replay): Message =
 proc createClientUpdateMessage*(alive, paused: bool): Message =
   Message(kind: MessageType.ClientUpdate, alive: alive,
           paused: paused)
+
+proc createReplayEventMessage*(event: ReplayEvent): Message =
+  Message(
+    kind: MessageType.ReplayEvent,
+    replayEvent: event
+  )
 
 proc createPlayerUpdateMessage*(players: seq[Player], top: Player): Message =
   # Sort by high score.

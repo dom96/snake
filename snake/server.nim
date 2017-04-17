@@ -138,25 +138,21 @@ proc processMessage(server: Server, client: Client, data: string) {.async.} =
     client.player.alive = msg.alive
     client.player.paused = msg.paused
 
-  of MessageType.RecordNewFood:
-    client.replay.recordNewFood(msg.foodPos, msg.foodKind)
+  of MessageType.ReplayEvent:
+    client.replay.add(msg.replayEvent)
 
-  of MessageType.RecordNewDirection:
-    client.replay.recordNewDirection(msg.dirPos, msg.dir)
+    if msg.replayEvent.kind == FoodEaten:
+      client.player.score += getPoints(msg.replayEvent.foodKind)
 
-  of MessageType.RecordFoodEaten:
-    client.replay.recordFoodEaten(msg.foodPos, msg.foodKind)
-    client.player.score += getPoints(msg.foodKind)
+      # Validate score.
+      if not isValidScore(server, client):
+        warn("Invalid score for $1" % $client)
+        client.player.score = 0
+        client.connected = false
+        return
 
-    # Validate score.
-    if not isValidScore(server, client):
-      warn("Invalid score for $1" % $client)
-      client.player.score = 0
-      client.connected = false
-      return
-
-    # Update top score
-    updateTopScore(server, client.player, client.hostname, client.replay)
+      # Update top score
+      updateTopScore(server, client.player, client.hostname, client.replay)
 
   of MessageType.PlayerUpdate:
     # The client shouldn't send this.
