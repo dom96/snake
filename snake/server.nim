@@ -130,10 +130,11 @@ proc processMessage(server: Server, client: Client, data: string) {.async.} =
     # Handle replays.
     if not msg.replay.isNil:
       client.replay = msg.replay
-      client.player.score = msg.replay.getScore()
+    else:
+      client.replay = newReplay()
+    client.player.score = client.replay.getScore()
 
-  of MessageType.ScoreUpdate:
-    client.player.score = msg.score
+  of MessageType.ClientUpdate:
     client.player.alive = msg.alive
     client.player.paused = msg.paused
 

@@ -7,7 +7,7 @@ import replay
 
 type
   MessageType* {.pure.} = enum
-    Hello, ScoreUpdate, PlayerUpdate,
+    Hello, ClientUpdate, PlayerUpdate,
     RecordNewFood, RecordFoodEaten, RecordNewDirection
 
   Player* = object
@@ -21,8 +21,7 @@ type
     of MessageType.Hello:
       nickname*: string
       replay*: Replay ## Optional
-    of MessageType.ScoreUpdate:
-      score*: BiggestInt
+    of MessageType.ClientUpdate:
       alive*: bool
       paused*: bool
     of MessageType.RecordNewFood, MessageType.RecordFoodEaten:
@@ -37,29 +36,10 @@ type
       count*: int
       top*: Player
 
-
-# TODO: Use marshal module.
-
-proc parsePlayer*(player: JsonNode): Player =
-  Player(
-    nickname: player["nickname"].getStr,
-    score: player["score"].getNum(),
-    alive: player["alive"].getBVal(),
-    paused: player["paused"].getBVal()
-  )
-
 proc parseMessage*(data: string): Message =
   let json = parseJson(data)
 
   result = to(json, Message)
-
-proc `%`(player: Player): JsonNode =
-  %{
-        "nickname": %player.nickname,
-        "score": %player.score,
-        "alive": %player.alive,
-        "paused": %player.paused
-   }
 
 proc toJson*(message: Message): string =
   var json = %message
@@ -69,8 +49,8 @@ proc toJson*(message: Message): string =
 proc createHelloMessage*(nickname: string, replay: Replay): Message =
   Message(kind: MessageType.Hello, nickname: nickname, replay: replay)
 
-proc createScoreUpdateMessage*(score: int, alive, paused: bool): Message =
-  Message(kind: MessageType.ScoreUpdate, score: score, alive: alive,
+proc createClientUpdateMessage*(alive, paused: bool): Message =
+  Message(kind: MessageType.ClientUpdate, alive: alive,
           paused: paused)
 
 proc createPlayerUpdateMessage*(players: seq[Player], top: Player): Message =

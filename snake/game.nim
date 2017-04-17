@@ -143,7 +143,7 @@ proc processMessage(game: Game, data: string) =
     # Update top score.
     game.allTimeScoreElement.innerHTML = createHighScoreText(msg.top)
 
-  of MessageType.Hello, MessageType.ScoreUpdate,
+  of MessageType.Hello, MessageType.ClientUpdate,
      MessageType.RecordNewFood, MessageType.RecordFoodEaten,
      MessageType.RecordNewDirection: discard
 
@@ -343,7 +343,7 @@ proc detectFoodCollision(game: Game): int =
   return -1
 
 proc updateServer(game: Game) =
-  let msg = createScoreUpdateMessage(game.score, game.player.alive, game.paused)
+  let msg = createClientUpdateMessage(game.player.alive, game.paused)
   if game.socket.readyState == ReadyState.Open:
     game.send(toJson(msg))
 
