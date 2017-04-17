@@ -1,8 +1,9 @@
 import asyncdispatch, os, random
 
+import gamelight/vec
 import websocket
 
-import ../snake/message
+import ../snake/[message, replay, food]
 
 proc createConnection(ip: string, i: int) {.async.} =
   let ws = await newAsyncWebsocket(ip, Port(25473), "", ssl = false,
@@ -19,9 +20,12 @@ proc createConnection(ip: string, i: int) {.async.} =
       await ws.sock.sendPing(true)
 
   proc sendMessages() {.async.} =
-    await ws.sock.sendText(toJson(createHelloMessage("bot" & $i)), true)
+    var replay = newReplay()
+    await ws.sock.sendText(toJson(createHelloMessage("bot" & $i, nil)), true)
     for i in 0 .. 90:
-      let msg = toJson(createScoreUpdateMessage(i, alive=true, paused=false))
+      let msg = toJson(createReplayEventMessage(
+        replay.recordFoodEaten((0.0, 0.0), Nibble)
+      ))
       await sleepAsync(random(800 .. 4000))
       await ws.sock.sendText(msg, true)
 

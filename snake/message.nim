@@ -1,4 +1,4 @@
-import json, algorithm, future
+import json, algorithm, future, strutils
 
 # TODO: It's annoying that we need to import these for FoodKind and Point...
 import gamelight/[vec, geometry], food
@@ -30,6 +30,11 @@ type
       players*: seq[Player]
       count*: int
       top*: Player
+
+proc `$`*(player: Player): string =
+  return "Player(nick: $1, score: $2, alive: $3, paused: $4)" % [
+    player.nickname, $player.score, $player.alive, $player.paused
+  ]
 
 proc parseMessage*(data: string): Message =
   let json = parseJson(data)

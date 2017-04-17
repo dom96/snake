@@ -67,6 +67,7 @@ proc updateClients(server: Server) {.async.} =
 proc updateTopScore(server: Server, player: Player, hostname: string,
                     replay: Replay) =
   if server.top.score < player.score:
+    info("New high score: $1 $2" % [$player, hostname])
     server.top = player
     server.top.alive = true
 
@@ -174,7 +175,6 @@ proc processClient(server: Server, client: Client) {.async.} =
 
     let frame = frameFut.read()
     if frame.opcode == Opcode.Text:
-      info("Received data from " & $client)
       let processFut = processMessage(server, client, frame.data)
       if processFut.failed:
         error("Client ($1) attempted to send bad JSON? " % $client,
