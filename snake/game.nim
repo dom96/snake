@@ -111,6 +111,12 @@ proc createHighScoreText(player: Player): string =
              span(intToStr(player.score.int), style="float: right;")
   return text
 
+proc send(game: Game, data: string) =
+  if not game.socket.isNil:
+    game.socket.send(data)
+  else:
+    console.log("Cannot send to server because not connected.")
+
 proc processMessage(game: Game, data: string) =
   let msg = parseMessage(data)
   case msg.kind
@@ -137,7 +143,9 @@ proc processMessage(game: Game, data: string) =
     # Update top score.
     game.allTimeScoreElement.innerHTML = createHighScoreText(msg.top)
 
-  of MessageType.Hello, MessageType.ScoreUpdate: discard
+  of MessageType.Hello, MessageType.ScoreUpdate,
+     MessageType.RecordNewFood, MessageType.RecordFoodEaten,
+     MessageType.RecordNewDirection: discard
 
 proc createFood(game: Game, kind: FoodKind, foodIndex: int) =
   let pos = generateFoodPos(game)
@@ -147,6 +155,13 @@ proc createFood(game: Game, kind: FoodKind, foodIndex: int) =
     game.food[foodIndex].ticksLeft = 20
 
   game.replay.recordNewFood(pos, kind)
+  game.send(toJson(
+    Message(
+      kind: MessageType.RecordNewFood,
+      foodPos: pos,
+      foodKind: kind
+    )
+  ))
 
 proc connect(game: Game) =
   game.socket = newWebSocket("ws://localhost:25473", "snake")
@@ -154,8 +169,8 @@ proc connect(game: Game) =
   game.socket.onOpen =
     proc (e: Event) =
       console.log("Connected to server")
-      let msg = createHelloMessage(game.nickname)
-      game.socket.send(toJson(msg))
+      let msg = createHelloMessage(game.nickname, game.replay)
+      game.send(toJson(msg))
 
   game.socket.onMessage =
     proc (e: MessageEvent) =
@@ -301,6 +316,13 @@ proc processDirections(game: Game) =
     if direction != game.player.direction:
       game.player.direction = direction
       game.replay.recordNewDirection(game.player.head.pos, direction)
+      game.send(toJson(
+        Message(
+          kind: MessageType.RecordNewDirection,
+          dirPos: game.player.head.pos,
+          dir: direction
+        )
+      ))
       break
 
 proc detectHeadCollision(game: Game): bool =
@@ -321,13 +343,9 @@ proc detectFoodCollision(game: Game): int =
   return -1
 
 proc updateServer(game: Game) =
-  # TODO: Don't send replay unless we are challenging high score.
-  let replay = game.replay
-
-  let msg = createScoreUpdateMessage(game.score, game.player.alive, game.paused,
-                                     replay)
+  let msg = createScoreUpdateMessage(game.score, game.player.alive, game.paused)
   if game.socket.readyState == ReadyState.Open:
-    game.socket.send(toJson(msg))
+    game.send(toJson(msg))
 
 proc updateScore(game: Game) =
   # Update score element.
@@ -341,15 +359,21 @@ proc eatFood(game: Game, foodIndex: int) =
   game.player.body.add(newSnakeSegment(tailPos))
 
   let kind = game.food[foodIndex].kind
+  game.score += getPoints(kind)
   case kind
   of Nibble:
-    game.score += 1
     game.createFood(Nibble, 0)
   of Special:
-    game.score += 5
     game.food[foodIndex] = nil
 
   game.replay.recordFoodEaten(game.player.head.pos, kind)
+  game.send(toJson(
+    Message(
+      kind: MessageType.RecordFoodEaten,
+      foodPos: game.player.head.pos,
+      foodKind: kind
+    )
+  ))
 
   game.updateScore()
 
@@ -570,8 +594,8 @@ proc restart*(game: Game) =
   game.score = 0
   game.replay = newReplay()
 
-  let msg = createHelloMessage(game.nickname)
-  game.socket.send(toJson(msg))
+  let msg = createHelloMessage(game.nickname, nil)
+  game.send(toJson(msg))
   updateScore(game)
 
 proc isScaledToScreen*(game: Game): bool =

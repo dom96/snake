@@ -3,7 +3,7 @@ import times
 
 import websocket
 
-import message, replay
+import message, replay, food
 
 type
   Client = ref object
@@ -13,6 +13,7 @@ type
     player: Player
     lastMessage: float
     rapidMessageCount: int
+    replay: Replay
 
   Server = ref object
     clients: seq[Client]
@@ -24,7 +25,8 @@ proc newClient(socket: AsyncSocket, hostname: string): Client =
     socket: socket,
     connected: true,
     hostname: hostname,
-    player: initPlayer()
+    player: initPlayer(),
+    replay: newReplay()
   )
 
 proc `$`(client: Client): string =
@@ -81,7 +83,7 @@ proc updateTopScore(server: Server, player: Player, hostname: string,
     ])
     file.close()
 
-proc validateScore(server: Server, client: Client, replay: Replay): bool =
+proc isValidScore(server: Server, client: Client): bool =
   result = true
   if client.player.score.int notin 0 .. 9999:
     warn("Bad score for ", $client)
@@ -92,14 +94,14 @@ proc validateScore(server: Server, client: Client, replay: Replay): bool =
   # https://security.stackexchange.com/a/148447
 
   # Verify the replay.
-  if client.player.score > server.top.score:
-    return replay.validate
+  # if client.player.score > server.top.score:
+  #   return replay.validate
 
 proc processMessage(server: Server, client: Client, data: string) {.async.} =
   ## Process a single message.
 
   # Check if last message was relatively recent. If so, kick the user.
-  if epochTime() - client.lastMessage < 0.5: # 500ms
+  if epochTime() - client.lastMessage < 0.2: # 200ms
     client.rapidMessageCount.inc
   else:
     client.rapidMessageCount = 0
@@ -118,31 +120,42 @@ proc processMessage(server: Server, client: Client, data: string) {.async.} =
     client.player.paused = false
     # Verify nickname is valid.
     # TODO: Check for swear words? :)
-    if client.player.nickname.len < 2:
-      warn("Nickname too short, changing to Anon")
+    if client.player.nickname.len == 0:
+      warn("Nickname is empty, changing to Anon")
       client.player.nickname = "Anon"
     if client.player.nickname.len > 8:
       warn("Nickname too long, truncating")
       client.player.nickname = client.player.nickname[0 .. 8]
-  of MessageType.ScoreUpdate:
-    let diff = msg.score - server.top.score
-    if msg.score < 0 or diff > 5 or not client.player.alive:
-      warn("Client ($1) is cheating" % $client)
-      client.connected = false
-      return
 
+    # Handle replays.
+    if not msg.replay.isNil:
+      client.replay = msg.replay
+      client.player.score = msg.replay.getScore()
+
+  of MessageType.ScoreUpdate:
     client.player.score = msg.score
     client.player.alive = msg.alive
     client.player.paused = msg.paused
 
+  of MessageType.RecordNewFood:
+    client.replay.recordNewFood(msg.foodPos, msg.foodKind)
+
+  of MessageType.RecordNewDirection:
+    client.replay.recordNewDirection(msg.dirPos, msg.dir)
+
+  of MessageType.RecordFoodEaten:
+    client.replay.recordFoodEaten(msg.foodPos, msg.foodKind)
+    client.player.score += getPoints(msg.foodKind)
+
     # Validate score.
-    if validateScore(server, client, msg.replay):
+    if not isValidScore(server, client):
+      warn("Invalid score for $1" % $client)
       client.player.score = 0
       client.connected = false
       return
 
     # Update top score
-    updateTopScore(server, client.player, client.hostname, msg.replay)
+    updateTopScore(server, client.player, client.hostname, client.replay)
 
   of MessageType.PlayerUpdate:
     # The client shouldn't send this.

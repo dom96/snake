@@ -57,6 +57,15 @@ proc recordNewDirection*(replay: Replay, pos: Point[float],
     )
   )
 
+proc getScore*(replay: Replay): int =
+  result = 0
+  for event in replay.events:
+    case event.kind
+    of FoodEaten:
+      result += getPoints(event.foodKind)
+    else:
+      discard
+
 proc `$`*(replay: Replay): string =
   return $(%replay)
 
