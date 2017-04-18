@@ -102,13 +102,13 @@ proc processMessage(server: Server, client: Client, data: string) {.async.} =
   ## Process a single message.
 
   # Check if last message was relatively recent. If so, kick the user.
-  if epochTime() - client.lastMessage < 0.2: # 200ms
+  if epochTime() - client.lastMessage < 0.1: # 100ms
     client.rapidMessageCount.inc
   else:
     client.rapidMessageCount = 0
 
   client.lastMessage = epochTime()
-  if client.rapidMessageCount > 4:
+  if client.rapidMessageCount > 10:
     warn("Client ($1) is firing messages too rapidly. Killing." % $client)
     client.connected = false
 
