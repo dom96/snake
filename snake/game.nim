@@ -158,7 +158,10 @@ proc createFood(game: Game, kind: FoodKind, foodIndex: int) =
   )))
 
 proc connect(game: Game) =
-  game.socket = newWebSocket("wss://picheta.me/snake/server/", "snake")
+  when defined(local):
+    game.socket = newWebSocket("ws://localhost:25473/", "snake")
+  else:
+    game.socket = newWebSocket("wss://picheta.me/snake/server/", "snake")
 
   game.socket.onOpen =
     proc (e: Event) =
