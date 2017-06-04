@@ -21,9 +21,12 @@ proc getUnicodeForCountry*(iso: string): string =
   ## Retrieves a country flag unicode character for the specified ISO two-letter
   ## country code.
   let base = 127397
-  result = "  "
+  result = ""
   for c in iso:
     result.add($Rune(base + c.ord))
+
+  if result.len == 0:
+    return "  "
 
 when isMainModule:
   doAssert getUnicodeForCountry("DE") == "🇩🇪"
