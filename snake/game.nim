@@ -5,7 +5,7 @@ from xmltree import nil
 import gamelight/[graphics, geometry, vec, utils]
 import jswebsockets
 
-import message, food, replay, countries
+import message, food, replay, countries, vibrate
 
 type
   Game* = ref object
@@ -228,6 +228,9 @@ proc switchScene(game: Game, scene: Scene) =
     )
 
   of Scene.Game:
+    # Initialise vibration (phones ask for permission, best to do it at start).
+    vibrate(10)
+
     # Let snake.nim know that the game started.
     if not game.onGameStart.isNil:
       game.onGameStart(game)
@@ -362,6 +365,8 @@ proc eatFood(game: Game, foodIndex: int) =
   of Special:
     game.food[foodIndex] = nil
 
+  vibrate(50)
+
   game.send(toJson(createReplayEventMessage(
     game.replay.recordFoodEaten(game.player.head.pos, kind)
   )))
@@ -399,6 +404,7 @@ proc update(game: Game) =
     game.player.alive = false
     game.messageElement.innerHtml = "game<br/>over"
     if wasAlive:
+      vibrate([100, 50, 200])
       updateServer(game)
     return
 
