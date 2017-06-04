@@ -187,9 +187,13 @@ proc processClient(server: Server, client: Client) {.async.} =
 proc onRequest(server: Server, req: Request) {.async.} =
   let (success, error) = await verifyWebsocketRequest(req, "snake")
   if success:
-    let countryCode = await getCountryForIP(req.hostname)
-    info("Client connected from ", req.hostname, " ", countryCode)
-    server.clients.add(newClient(req.client, req.hostname, countryCode))
+    var hostname = req.hostname
+    if req.headers.hasKey("x-forwarded-for"):
+      hostname = req.headers["x-forwarded-for"]
+
+    let countryCode = await getCountryForIP(hostname)
+    info("Client connected from ", hostname, " ", countryCode)
+    server.clients.add(newClient(req.client, hostname, countryCode))
     asyncCheck processClient(server, server.clients[^1])
   else:
     error("WS negotiation failed: " & error)
