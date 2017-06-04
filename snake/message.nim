@@ -13,6 +13,7 @@ type
     nickname*: string
     score*: BiggestInt
     alive*, paused*: bool
+    countryCode*: string
 
   Message* = object
     case kind*: MessageType
@@ -73,5 +74,5 @@ proc createPlayerUpdateMessage*(players: seq[Player], top: Player): Message =
     top: top
   )
 
-proc initPlayer*(): Player =
-  Player(nickname: "Unknown", score: 0)
+proc initPlayer*(countryCode: string): Player =
+  Player(nickname: "Unknown", score: 0, countryCode: countryCode)

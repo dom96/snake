@@ -5,7 +5,7 @@ from xmltree import nil
 import gamelight/[graphics, geometry, vec, utils]
 import jswebsockets
 
-import message, food, replay
+import message, food, replay, countries
 
 type
   Game* = ref object
@@ -101,13 +101,17 @@ proc generateFoodPos(game: Game): Point[float] =
     i.inc()
 
 proc createHighScoreText(player: Player): string =
+  let country = replace(getUnicodeForCountry(player.countryCode) & "  ", " ",
+                        "&nbsp;")
   let nickname = xmltree.escape(player.nickname.toLowerAscii())
   let deathStyle =
     if player.alive: ""
     else: ("background-image: linear-gradient(transparent 5px,$1 5px,$1 7px,transparent 5px);" &
           "background-image: -webkit-linear-gradient(transparent 5px,$1 5px,$1 7px,transparent 5px);") %
           crossOutColor
-  let text = span(nickname, style="float: left;" & deathStyle) &
+  let text = span(country, style="float: left; line-height: 1.6;") &
+             span(nickname, style="float: left; width: 34px;overflow: hidden;" &
+                                  deathStyle) &
              span(intToStr(player.score.int), style="float: right;")
   return text
 

@@ -3,7 +3,7 @@ import times
 
 import websocket
 
-import message, replay, food
+import message, replay, food, countries
 
 type
   Client = ref object
@@ -20,12 +20,12 @@ type
     needsUpdate: bool
     top: Player ## Highest score ever.
 
-proc newClient(socket: AsyncSocket, hostname: string): Client =
+proc newClient(socket: AsyncSocket, hostname, countryCode: string): Client =
   return Client(
     socket: socket,
     connected: true,
     hostname: hostname,
-    player: initPlayer(),
+    player: initPlayer(countryCode),
     replay: newReplay()
   )
 
@@ -187,8 +187,9 @@ proc processClient(server: Server, client: Client) {.async.} =
 proc onRequest(server: Server, req: Request) {.async.} =
   let (success, error) = await verifyWebsocketRequest(req, "snake")
   if success:
-    info("Client connected from ", req.hostname)
-    server.clients.add(newClient(req.client, req.hostname))
+    let countryCode = await getCountryForIP(req.hostname)
+    info("Client connected from ", req.hostname, " ", countryCode)
+    server.clients.add(newClient(req.client, req.hostname, countryCode))
     asyncCheck processClient(server, server.clients[^1])
   else:
     error("WS negotiation failed: " & error)
@@ -205,7 +206,8 @@ proc loadTopScore(server: Server) =
     server.top = Player(
       nickname: split[0],
       score: split[1].parseInt(),
-      alive: true
+      alive: true,
+      countryCode: waitFor getCountryForIP(split[3])
     )
   else:
     info("No topscores.snake file found")
