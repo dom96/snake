@@ -34,7 +34,8 @@ proc onKeydown(game: Game, ev: Event) =
 
 proc onTouch(game: Game, ev: TouchEvent) =
   let lastDir = game.getLastDirection()
-  let (touched, direction) = detectTouch(canvasId, ev, lastDir)
+  let headPixelPos = game.getHeadPixelPos()
+  let (touched, direction) = detectTouch(canvasId, ev, lastDir, headPixelPos)
 
   if touched:
     game.changeDirection(direction)

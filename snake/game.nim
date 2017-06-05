@@ -311,6 +311,19 @@ proc getLastDirection*(game: Game): Direction =
   if game.player.requestedDirections.len > 0:
     result = game.player.requestedDirections[^1]
 
+proc getHeadPixelPos*(game: Game): Point[int] =
+  ## Returns the pixel point of the head's front (centered).
+  ##
+  ## The resulting point is scaled to the canvas on the screen (!).
+  let res = game.player.head.pos.toPixelPos()
+  case game.player.direction
+  of dirNorth, dirSouth:
+    result = (res.x.int + (segmentSize div 2), res.y.int)
+  of dirWest, dirEast:
+    result = (res.x.int, res.y.int + (segmentSize div 2))
+
+  return game.renderer.scale(result)
+
 proc processDirections(game: Game) =
   while game.player.requestedDirections.len > 0:
     let direction = game.player.requestedDirections.popFirst()
