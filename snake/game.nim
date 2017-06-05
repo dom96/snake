@@ -45,8 +45,8 @@ type
 const
   segmentSize = 10 ## In pixels
   levelWidth = 30.0 ## In segments
-  levelHeight = 18.0 ## In Segments
-  scoreSidebarWidth = 100.0
+  levelHeight = 20.0 ## In Segments
+  scoreSidebarWidth = 120.0
   scoreTextWidth = scoreSideBarWidth - 30
   allTimeScoreTop = 55.0
   renderWidth = segmentSize * levelWidth + scoreSidebarWidth ## In pixels
@@ -240,15 +240,15 @@ proc switchScene(game: Game, scene: Scene) =
       game.renderer.setScaleToScreen(true)
 
     # Create text element nodes to show player score.
-    let scoreTextPos = (renderWidth - scoreSidebarWidth + 25, 10.0)
+    let scoreTextPos = (renderWidth - scoreSidebarWidth + 35, 10.0)
     discard game.renderer.createTextElement("score", scoreTextPos, "#000000",
                                             24, font)
-    let scorePos = (renderWidth - scoreSidebarWidth + 25, 35.0)
+    let scorePos = (renderWidth - scoreSidebarWidth + 35, 35.0)
     game.scoreElement = game.renderer.createTextElement("0000000", scorePos,
                           "#000000", 14, font)
 
     # Create all time high score elements.
-    let allTimePos = (renderWidth - scoreSidebarWidth + 17, allTimeScoreTop)
+    let allTimePos = (renderWidth - scoreSidebarWidth + 28, allTimeScoreTop)
     game.allTimeTextElement = game.renderer.createTextElement(
         "all time high score", allTimePos, levelBgColor, 10, font)
     let allTimeScorePos = (renderWidth - scoreSidebarWidth + 15,
