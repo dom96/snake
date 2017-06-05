@@ -26,7 +26,7 @@ proc getUnicodeForCountry*(iso: string): string =
     result.add($Rune(base + c.ord))
 
   if result.len == 0:
-    return "  "
+    return "      "
 
 when isMainModule:
   doAssert getUnicodeForCountry("DE") == "🇩🇪"

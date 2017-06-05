@@ -109,8 +109,8 @@ proc createHighScoreText(player: Player): string =
     else: ("background-image: linear-gradient(transparent 5px,$1 5px,$1 7px,transparent 5px);" &
           "background-image: -webkit-linear-gradient(transparent 5px,$1 5px,$1 7px,transparent 5px);") %
           crossOutColor
-  let text = span(country, style="float: left; line-height: 1.6;") &
-             span(nickname, style="float: left; width: 34px;overflow: hidden;" &
+  let text = span(country, style="float: left; line-height: 1.4;") &
+             span(nickname, style="float: left;" &
                                   deathStyle) &
              span(intToStr(player.score.int), style="float: right;")
   return text
