@@ -1,11 +1,16 @@
 import unicode
 
 when not defined(js):
-  import httpclient, logging, asyncdispatch, json
+  import httpclient, logging, asyncdispatch, json, tables
+
+  var countryCache: Table[string, string] = initTable[string, string]()
 
   proc getCountryForIP*(ip: string): Future[string] {.async.} =
     ## Returns a two-letter ISO code specifying the country that the
     ## IP address belongs to, if the country cannot be determined "" is returned.
+    if ip in countryCache:
+      return countryCache[ip]
+
     var client = newAsyncHttpClient()
 
     let responseFut = client.getContent("http://freegeoip.net/json/" & ip)
@@ -15,7 +20,9 @@ when not defined(js):
       return ""
 
     let obj = parseJson(responseFut.read())
-    return obj["country_code"].getStr()
+    client.close()
+    countryCache[ip] = obj["country_code"].getStr()
+    return countryCache[ip]
 
 proc getUnicodeForCountry*(iso: string): string =
   ## Retrieves a country flag unicode character for the specified ISO two-letter
