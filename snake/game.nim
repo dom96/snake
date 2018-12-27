@@ -18,7 +18,7 @@ type
     paused: bool
     blink: bool
     nextSpecial: float # ms until next special food is shown.
-    scoreElement: Element
+    scoreElement, scoreTextElement: Element
     allTimeTextElement, allTimeScoreElement: Element
     messageElement: Element
     playerCountElement: Element
@@ -153,6 +153,7 @@ proc processMessage(game: Game, data: string) =
     game.replay = msg.oldReplay
     game.paused = false
     game.currentReplayTime = some(game.replay.events[0].time)
+    game.scoreTextElement.innerHtml = "replay"
   of MessageType.Hello, MessageType.ClientUpdate,
      MessageType.ReplayEvent, MessageType.GetReplay: discard
 
@@ -247,8 +248,9 @@ proc switchScene(game: Game, scene: Scene) =
 
     # Create text element nodes to show player score.
     let scoreTextPos = (renderWidth - scoreSidebarWidth + 35, 10.0)
-    discard game.renderer.createTextElement("score", scoreTextPos, "#000000",
-                                            24, font)
+    game.scoreTextElement = game.renderer.createTextElement(
+      "score", scoreTextPos, "#000000", 24, font
+    )
     let scorePos = (renderWidth - scoreSidebarWidth + 35, 35.0)
     game.scoreElement = game.renderer.createTextElement("0000000", scorePos,
                           "#000000", 14, font)
@@ -364,7 +366,9 @@ proc detectFoodCollision(game: Game): int =
   return -1
 
 proc updateServer(game: Game) =
-  let msg = createClientUpdateMessage(game.player.alive, game.paused)
+  let msg = createClientUpdateMessage(
+    game.player.alive, game.paused or game.isReplay
+  )
   if game.socket.readyState == ReadyState.Open:
     game.send(toJson(msg))
 
@@ -424,7 +428,13 @@ proc executeEvent(game: Game, event: ReplayEvent) =
       game.food[0] = Food(kind: Nibble, pos: event.foodPos, ticksLeft: -1)
     of Special:
       game.food[1] = Food(kind: Special, pos: event.foodPos, ticksLeft: 20)
-  of FoodEaten: discard # Taken care of by game loop.
+  of FoodEaten:
+    let tailPos = game.player.body[^1].pos.copy()
+    game.player.body.add(newSnakeSegment(tailPos))
+    game.score += getPoints(event.foodKind)
+    updateScore(game)
+    if event.foodKind == Special:
+      game.food[1] = nil
   of DirectionChanged:
     game.player.direction = event.playerDirection
     game.player.head.pos = event.playerPos
@@ -443,28 +453,34 @@ proc updateReplay(game: Game) =
   game.currentReplayTime = some(currentTime + diff)
   game.lastSpecial = game.lastUpdate
 
+  # Game over.
+  if game.replay.events.len == 0:
+    game.player.alive = false
+    game.messageElement.innerHtml = "game<br/>over"
+
 proc update(game: Game) =
   # Return early if paused.
   if game.paused or game.scene != Scene.Game: return
 
-  # Check for collision with itself.
-  let headCollision = game.detectHeadCollision()
-  if headCollision:
-    let wasAlive = game.player.alive
-    game.player.alive = false
-    game.messageElement.innerHtml = "game<br/>over"
-    if wasAlive:
+  if not game.player.alive: return
+
+  if not game.isReplay:
+    # Check for collision with itself.
+    let headCollision = game.detectHeadCollision()
+    if headCollision:
+      game.player.alive = false
+      game.messageElement.innerHtml = "game<br/>over"
       vibrate([100, 50, 200])
       updateServer(game)
-    return
+      return
 
-  # Check for food collision.
-  let foodCollision = game.detectFoodCollision()
-  if foodCollision != -1:
-    game.eatFood(foodCollision)
+    # Check for food collision.
+    let foodCollision = game.detectFoodCollision()
+    if foodCollision != -1:
+      game.eatFood(foodCollision)
 
-  # Change direction.
-  processDirections(game)
+    # Change direction.
+    processDirections(game)
 
   # Save old position of head.
   var oldPos = game.player.head.pos.copy()
@@ -595,6 +611,12 @@ proc drawGame(game: Game) =
   else:
     game.messageElement.style.display = "none"
     game.scoreElement.style.color = "black"
+
+  # Show/hide `replay` message
+  if game.blink and game.isReplay:
+    game.scoreTextElement.style.display = "none"
+  else:
+    game.scoreTextElement.style.display = "block"
 
 proc draw(game: Game, lag: float) =
   # Fill background color.
