@@ -26,6 +26,8 @@ proc onKeydown(game: Game, ev: Event) =
     game.togglePause()
   of Key.KeyN:
     game.restart()
+  of Key.KeyR:
+    game.replay()
   else:
     handled = false
 

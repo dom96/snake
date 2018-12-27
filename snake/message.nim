@@ -7,7 +7,7 @@ import replay
 
 type
   MessageType* {.pure.} = enum
-    Hello, ClientUpdate, PlayerUpdate, ReplayEvent
+    Hello, ClientUpdate, PlayerUpdate, ReplayEvent, GetReplay, Replay
 
   Player* = object
     nickname*: string
@@ -26,11 +26,15 @@ type
       paused*: bool
     of MessageType.ReplayEvent:
       replayEvent*: ReplayEvent
+    of MessageType.GetReplay:
+      dummy, dummy2, dummy3: int
     # Server messages
     of MessageType.PlayerUpdate:
       players*: seq[Player]
       count*: int
       top*: Player
+    of MessageType.Replay:
+      oldReplay*: Replay
 
 proc `$`*(player: Player): string =
   return "Player(nick: $1, score: $2, alive: $3, paused: $4)" % [
@@ -72,6 +76,17 @@ proc createPlayerUpdateMessage*(players: seq[Player], top: Player): Message =
     players: selection,
     count: players.len,
     top: top
+  )
+
+proc createGetReplayMessage*(): Message =
+  return Message(
+    kind: MessageType.GetReplay
+  )
+
+proc createReplayMessage*(replay: Replay): Message =
+  return Message(
+    kind: MessageType.Replay,
+    oldReplay: replay
   )
 
 proc initPlayer*(countryCode: string): Player =

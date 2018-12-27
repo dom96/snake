@@ -1,4 +1,5 @@
 import jsconsole, random, strutils, dom, math, colors, deques, htmlgen, sugar
+import options
 
 from xmltree import nil
 
@@ -29,6 +30,7 @@ type
     nickname: string
     onGameStart*: proc (game: Game)
     replay: Replay
+    currentReplayTime: Option[float] # None when replay isn't active.
 
   Scene {.pure.} = enum
     MainMenu, Game
@@ -123,6 +125,7 @@ proc send(game: Game, data: string) =
 
 proc processMessage(game: Game, data: string) =
   let msg = parseMessage(data)
+  console.log("Got message ", msg)
   case msg.kind
   of MessageType.PlayerUpdate:
     console.log("Received ", msg.count, " players")
@@ -146,9 +149,12 @@ proc processMessage(game: Game, data: string) =
 
     # Update top score.
     game.allTimeScoreElement.innerHTML = createHighScoreText(msg.top)
-
+  of MessageType.Replay:
+    game.replay = msg.oldReplay
+    game.paused = false
+    game.currentReplayTime = some(game.replay.events[0].time)
   of MessageType.Hello, MessageType.ClientUpdate,
-     MessageType.ReplayEvent: discard
+     MessageType.ReplayEvent, MessageType.GetReplay: discard
 
 proc createFood(game: Game, kind: FoodKind, foodIndex: int) =
   let pos = generateFoodPos(game)
@@ -295,8 +301,11 @@ proc newGame*(canvasId: string): Game =
 
   switchScene(result, Scene.MainMenu)
 
+proc isReplay(game: Game): bool =
+  return game.currentReplayTime.isSome()
+
 proc changeDirection*(game: Game, direction: Direction) =
-  if game.scene != Scene.Game: return
+  if game.scene != Scene.Game or game.isReplay: return
 
   if game.player.requestedDirections.len >= 2:
     return
@@ -406,6 +415,34 @@ proc updateFood(game: Game) =
     game.nextSpecial = 0
     createFood(game, Special, 1)
 
+proc executeEvent(game: Game, event: ReplayEvent) =
+  console.log("Executing event ", $event.kind, " at time ", event.time)
+  case event.kind
+  of FoodAppeared:
+    case event.foodKind
+    of Nibble:
+      game.food[0] = Food(kind: Nibble, pos: event.foodPos, ticksLeft: -1)
+    of Special:
+      game.food[1] = Food(kind: Special, pos: event.foodPos, ticksLeft: 20)
+  of FoodEaten: discard # Taken care of by game loop.
+  of DirectionChanged:
+    game.player.direction = event.playerDirection
+    game.player.head.pos = event.playerPos
+
+proc updateReplay(game: Game) =
+  if not game.isReplay: return
+
+  let currentTime = game.currentReplayTime.get()
+  while game.replay.events.len > 0 and currentTime > game.replay.events[0].time:
+    executeEvent(game, game.replay.events[0])
+    game.replay.events.delete(0)
+
+  # Hacky, but we reuse lastSpecial to keep track of time. This has the side
+  # effect that it prevents random special food being created.
+  let diff = (game.lastUpdate - game.lastSpecial) / 1000
+  game.currentReplayTime = some(currentTime + diff)
+  game.lastSpecial = game.lastUpdate
+
 proc update(game: Game) =
   # Return early if paused.
   if game.paused or game.scene != Scene.Game: return
@@ -451,7 +488,10 @@ proc update(game: Game) =
   elif game.player.head.pos.y < 0:
     game.player.head.pos.y = levelHeight
 
-  # Update food
+  # Update replay (only does anything when replay is enabled).
+  updateReplay(game)
+
+  # Update food.
   updateFood(game)
 
 proc drawFood(game: Game, food: Food) =
@@ -603,10 +643,16 @@ proc restart*(game: Game) =
   game.player = newSnake()
   game.score = 0
   game.replay = newReplay()
+  game.currentReplayTime = none[float]()
 
   let msg = createHelloMessage(game.nickname, nil)
   game.send(toJson(msg))
   updateScore(game)
+
+proc replay*(game: Game) =
+  restart(game)
+  game.paused = true
+  game.send(toJson(createGetReplayMessage()))
 
 proc isScaledToScreen*(game: Game): bool =
   return game.renderer.getScaleToScreen()

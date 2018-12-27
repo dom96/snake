@@ -81,3 +81,7 @@ proc validate*(replay: Replay): bool =
 
   # TODO: More sophisticated automatic verification.
   return true
+
+proc parseReplay*(data: string): Replay =
+  let d = parseJson(data)
+  return to(d, Replay)

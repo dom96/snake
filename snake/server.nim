@@ -19,6 +19,7 @@ type
     clients: seq[Client]
     needsUpdate: bool
     top: Player ## Highest score ever.
+    topReplay: Replay
 
 proc newClient(socket: AsyncSocket, hostname, countryCode: string): Client =
   return Client(
@@ -56,7 +57,7 @@ proc updateClients(server: Server) {.async.} =
       let msg = createPlayerUpdateMessage(players, server.top)
       # Iterate over indexes in case a new client connects in-between our calls
       # to `sendText`.
-      for i in 0 .. <server.clients.len:
+      for i in 0 ..< server.clients.len:
         await server.clients[i].socket.sendText(toJson(msg))
 
       server.needsUpdate = false
@@ -70,6 +71,7 @@ proc updateTopScore(server: Server, player: Player, hostname: string,
     info("New high score: $1 $2" % [$player, hostname])
     server.top = player
     server.top.alive = true
+    server.topReplay = replay
 
     # Save to topscore.snake.
     let filename = getTopScoresFilename()
@@ -155,9 +157,12 @@ proc processMessage(server: Server, client: Client, data: string) {.async.} =
       # Update top score
       updateTopScore(server, client.player, client.hostname, client.replay)
 
-  of MessageType.PlayerUpdate:
+  of MessageType.PlayerUpdate, MessageType.Replay:
     # The client shouldn't send this.
     client.connected = false
+  of MessageType.GetReplay:
+    let msg = createReplayMessage(server.topReplay)
+    await client.socket.sendText(toJson(msg))
 
   server.needsUpdate = true
 
@@ -213,6 +218,7 @@ proc loadTopScore(server: Server) =
       alive: true,
       countryCode: waitFor getCountryForIP(split[3])
     )
+    server.topReplay = parseReplay(split[4])
   else:
     info("No topscores.snake file found")
     server.top = Player(
