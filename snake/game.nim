@@ -118,7 +118,7 @@ proc createHighScoreText(player: Player): string =
   return text
 
 proc send(game: Game, data: string) =
-  if not game.socket.isNil:
+  if not game.socket.isNil and game.socket.readyState == ReadyState.Open:
     game.socket.send(data)
   else:
     console.log("Cannot send to server because not connected.")
