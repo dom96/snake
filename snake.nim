@@ -7,10 +7,17 @@ import snake/[game, keyboard, touch]
 const
   canvasId = "snake_canvas"
 
+type
+  KeyboardEvent = ref object of Event
+    metaKey: bool
+
 proc onKeydown(game: Game, ev: Event) =
+  var ev = KeyboardEvent(ev)
   console.log(ev.keyCode)
   let key = ev.keyCode.fromKeyCode()
   console.log("Pressed: ", $key)
+  if ev.shiftKey or ev.ctrlKey or ev.altKey or ev.metaKey:
+    return
 
   var handled = true
   case key
