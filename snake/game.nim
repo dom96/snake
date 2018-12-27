@@ -152,6 +152,7 @@ proc processMessage(game: Game, data: string) =
   of MessageType.Replay:
     game.replay = msg.oldReplay
     game.paused = false
+    game.lastSpecial = game.lastUpdate
     game.currentReplayTime = some(game.replay.events[0].time)
     game.scoreTextElement.innerHtml = "replay"
   of MessageType.Hello, MessageType.ClientUpdate,
