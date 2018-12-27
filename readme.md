@@ -14,6 +14,7 @@ After=network.target httpd.service
 Wants=network-online.target
 
 [Service]
+Environment=IPSTACK_KEY=<YOUR_IPSTACK_KEY_HERE>
 Type=simple
 WorkingDirectory=/home/user/dev/snake/
 ExecStart=/usr/bin/stdbuf -oL /home/user/dev/snake/snake/server
