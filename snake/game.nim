@@ -90,8 +90,8 @@ proc generateFoodPos(game: Game): Point[float] =
   var i = 0
   while i < 5:
     result = (
-      rand(0 .. levelWidth.int).float,
-      rand(0 .. levelHeight.int).float
+      rand(0 ..< levelWidth.int).float,
+      rand(0 ..< levelHeight.int).float
     )
 
     var hit = false
@@ -162,6 +162,7 @@ proc createFood(game: Game, kind: FoodKind, foodIndex: int) =
   let pos = generateFoodPos(game)
 
   game.food[foodIndex] = Food(kind: kind, pos: pos, ticksLeft: -1)
+  console.log("Created food at ", pos)
   if kind == Special:
     game.food[foodIndex].ticksLeft = 20
 
