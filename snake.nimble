@@ -9,3 +9,11 @@ license       = "MIT"
 
 requires "nim >= 0.16.0", "gamelight", "websocket", "jswebsockets"
 
+task server, "Compile server":
+  exec "nim c snake/server"
+
+task debug, "Compile debug client":
+  exec "nim js --out:public/snake.js -d:local snake.nim"
+
+task release, "Compile release client":
+  exec "nim js --out:public/snake.js snake.nim"

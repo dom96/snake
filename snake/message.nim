@@ -1,4 +1,4 @@
-import json, algorithm, future, strutils
+import json, algorithm, sugar, strutils
 
 # TODO: It's annoying that we need to import these for FoodKind and Point...
 import gamelight/[vec, geometry], food
@@ -65,7 +65,7 @@ proc createPlayerUpdateMessage*(players: seq[Player], top: Player): Message =
   let sorted = sorted(players, (x, y: Player) => cmp(x.score, y.score),
                       Descending)
 
-  let selection = sorted[0 .. <min(sorted.len, 5)]
+  let selection = sorted[0 ..< min(sorted.len, 5)]
 
   return Message(
     kind: MessageType.PlayerUpdate,

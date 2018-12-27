@@ -1,4 +1,4 @@
-import dom, jsconsole, future
+import dom, jsconsole, sugar
 
 import gamelight/[geometry, utils]
 
@@ -45,7 +45,7 @@ proc onTouch(game: Game, ev: TouchEvent) =
     ev.target.Element.click()
 
 proc onTick(game: Game, time: float) =
-  let reqId = window.requestAnimationFrame((time: float) => onTick(game, time))
+  discard window.requestAnimationFrame((time: float) => onTick(game, time))
 
   game.nextFrame(time)
 

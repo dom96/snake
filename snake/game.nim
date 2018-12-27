@@ -1,4 +1,4 @@
-import jsconsole, random, strutils, dom, math, colors, deques, htmlgen, future
+import jsconsole, random, strutils, dom, math, colors, deques, htmlgen, sugar
 
 from xmltree import nil
 
@@ -88,8 +88,8 @@ proc generateFoodPos(game: Game): Point[float] =
   var i = 0
   while i < 5:
     result = (
-      random(0 .. levelWidth.int).float,
-      random(0 .. levelHeight.int).float
+      rand(0 .. levelWidth.int).float,
+      rand(0 .. levelHeight.int).float
     )
 
     var hit = false
@@ -134,7 +134,7 @@ proc processMessage(game: Game, data: string) =
     game.playerCountElement.innerHtml = count & " others playing"
 
     # Update high score labels.
-    for i in 0 .. <game.highScoreElements.high:
+    for i in 0 ..< game.highScoreElements.high:
       if i < len(game.players):
         let player = game.players[i]
         game.highScoreElements[i].innerHTML = createHighScoreText(player)
@@ -339,13 +339,13 @@ proc processDirections(game: Game) =
 
 proc detectHeadCollision(game: Game): bool =
   # Check if head collides with any other segment.
-  for i in 1 .. <game.player.body.len:
+  for i in 1 ..< game.player.body.len:
     if game.player.head.pos == game.player.body[i].pos:
       return true
 
 proc detectFoodCollision(game: Game): int =
   # Check if head collides with food.
-  for i in 0 .. <game.food.len:
+  for i in 0 ..< game.food.len:
     if game.food[i].isNil:
       continue
 
@@ -398,7 +398,7 @@ proc updateFood(game: Game) =
   # Randomly create special food.
   if game.nextSpecial == 0:
     game.lastSpecial = game.lastUpdate
-    game.nextSpecial = random(4_000.0 .. 30_000.0)
+    game.nextSpecial = rand(4_000.0 .. 30_000.0)
 
   if game.lastUpdate - game.lastSpecial >= game.nextSpecial and
      game.food[1].isNil:
@@ -437,7 +437,7 @@ proc update(game: Game) =
   game.player.head.pos.add(movementVec)
 
   # Move each body segment with the head.
-  for i in 1 .. <game.player.body.len:
+  for i in 1 ..< game.player.body.len:
     swap(game.player.body[i].pos, oldPos)
 
   # Create a portal out of the edges of the level.
@@ -482,8 +482,8 @@ proc drawFood(game: Game, food: Food) =
   ]
 
   var pos = food.pos.toPixelPos()
-  for x in 0 .. <segmentSize:
-    for y in 0 .. <segmentSize:
+  for x in 0 ..< segmentSize:
+    for y in 0 ..< segmentSize:
       let index = x + (y * segmentSize)
       let pos = (pos.x + x.float, pos.y + y.float)
       case food.kind
@@ -526,7 +526,7 @@ proc drawGame(game: Game) =
 
   # Draw snake.
   if not (game.blink and showMessage):
-    for i in 0 .. <game.player.body.len:
+    for i in 0 ..< game.player.body.len:
       let segment = game.player.body[i]
       let pos = segment.pos.toPixelPos()
       game.renderer.fillRect(pos.x, pos.y, segmentSize, segmentSize, "#000000")
