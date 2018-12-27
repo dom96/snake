@@ -57,7 +57,7 @@ proc updateClients(server: Server) {.async.} =
       # Iterate over indexes in case a new client connects in-between our calls
       # to `sendText`.
       for i in 0 .. <server.clients.len:
-        await server.clients[i].socket.sendText(toJson(msg), false)
+        await server.clients[i].socket.sendText(toJson(msg))
 
       server.needsUpdate = false
 
@@ -165,7 +165,7 @@ proc processClient(server: Server, client: Client) {.async.} =
   ## Loop which continuously reads data from the client and processes the
   ## messages which are received.
   while client.connected:
-    var frameFut = client.socket.readData(false)
+    var frameFut = client.socket.readData()
     yield frameFut
     if frameFut.failed:
       error("Error occurred handling client messages.\n" &
@@ -185,8 +185,8 @@ proc processClient(server: Server, client: Client) {.async.} =
   client.socket.close()
 
 proc onRequest(server: Server, req: Request) {.async.} =
-  let (success, error) = await verifyWebsocketRequest(req, "snake")
-  if success:
+  let (client, error) = await verifyWebsocketRequest(req, "snake")
+  if error.len == 0:
     var hostname = req.hostname
     if req.headers.hasKey("x-forwarded-for"):
       hostname = req.headers["x-forwarded-for"]
@@ -241,7 +241,7 @@ when isMainModule:
 
   # TODO: Slightly annoying that I cannot just use future.=> here instead.
   # TODO: Ref https://github.com/nim-lang/Nim/issues/4753
-  proc cb(req: Request): Future[void] {.async.} = await onRequest(server, req)
+  proc cb(req: Request): Future[void] {.async, gcsafe.} = await onRequest(server, req)
 
   asyncCheck updateClients(server)
   waitFor httpServer.serve(port, cb)
